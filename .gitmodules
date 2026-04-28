@@ -1,0 +1,3 @@
+[submodule "ripe-skills"]
+	path = ripe-skills
+	url = https://github.com/vdz/ripe-skills.git
