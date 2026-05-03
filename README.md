@@ -14,6 +14,17 @@ Personal collection of [Claude Code skills](https://docs.anthropic.com/en/docs/a
 
 The four `*-ripe-*` skills live in the [`ripe-skills`](https://github.com/vdz/ripe-skills) submodule (also published to npm as [`ripe-skills`](https://www.npmjs.com/package/ripe-skills)).
 
+## Skills I use (external)
+
+These aren't in this repo — credit to their authors. Listed here so anyone seeing my workflow knows the rest of my stack.
+
+| Plugin | Source | What it provides |
+|---|---|---|
+| **superpowers** | [obra/superpowers](https://github.com/obra/superpowers) by Jesse Vincent | Brainstorming, writing/executing plans, TDD, systematic debugging, code review, parallel-agent dispatch, git worktrees, verification-before-completion |
+| **mattpocock/skills** | [mattpocock/skills](https://github.com/mattpocock/skills) by Matt Pocock | `diagnose`, `tdd`, `grill-me`, `triage`, `to-prd`, `to-issues`, `caveman`, `git-guardrails`, `improve-codebase-architecture`, plus per-repo `setup` |
+
+> **Install:** `superpowers` via Claude Code's plugin system (`claude plugin install obra/superpowers`); Matt Pocock's collection via `npx skills@latest add mattpocock/skills`.
+
 ## Install
 
 Clone with submodules:
