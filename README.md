@@ -6,7 +6,7 @@
 I use this skills primarily with Claude Code for **engineering** mainly, when my emphasis is creating a **predictable & high-quality code**, optimized for maintenance and scale in function & team. I've been doing software engineering professionally since 1999, and I specialize in user-facing applicaions i.e. front-end.
 
 ## Skills I'd authored
-I use a Ripe Architecture [AGENT-TODO: make a link to the repo's readme] in my application work on the web — I love it! It's battle-tested, and is great for the agentic age. [AGENT-TODO: add a local link]
+I use a [Ripe Architecture](https://github.com/vdz/ripe-skills#readme) in my application work on the web — I love it! It's battle-tested, and is great for the agentic age. Read the full architecture: [in this repo](ripe-skills/ripe-architecture-docs/the-ripe-method.md) or [on GitHub](https://github.com/vdz/ripe-skills/blob/main/ripe-architecture-docs/the-ripe-method.md).
 
 It's easy to use, but you better grok the architecture to really enjoy it.
 
