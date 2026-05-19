@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Implementation notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" />
+<style>
+  :root {
+    --bg:        #FAFAF8;
+    --surface:   #FFFFFF;
+    --surface-2: #F6F6F4;
+    --surface-3: #EFEFEC;
+    --dot:       #ECECE7;
+    --line:      #E4E4DE;
+    --line-strong: #CDCDC6;
+
+    --ink:   #14140F;
+    --ink-2: #2D2D26;
+    --ink-3: #6A6A60;
+
+    --decision:      #5B5BF5;
+    --decision-ink:  #3737D6;
+    --decision-soft: #EEEEFE;
+
+    --change:      #E89A2B;
+    --change-ink:  #6A4513;
+    --change-soft: #FBEBD0;
+
+    --tradeoff:      #E04F4F;
+    --tradeoff-ink:  #6F1F1C;
+    --tradeoff-soft: #FBDCDC;
+
+    --fyi:      #6A6A60;
+    --fyi-ink:  #2D2D26;
+    --fyi-soft: #EFEFEC;
+
+    --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    --font-mono: "JetBrainsMono Nerd Font", "JetBrainsMono Nerd Font Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+
+  html, body {
+    background: var(--bg);
+    background-image: radial-gradient(circle, var(--dot) 0.85px, transparent 1.1px);
+    background-size: 20px 20px;
+    color: var(--ink);
+  }
+  body {
+    font-family: var(--font-sans);
+    font-size: 16.5px;
+    line-height: 1.35;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 40px 24px 100px;
+  }
+
+  /* ── Document header ───────────────────────────────── */
+  h1 {
+    font-size: 33px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin: 0 0 6px;
+  }
+  .doc-meta {
+    color: var(--ink-3);
+    font-size: 14px;
+    margin: 0 0 4px;
+  }
+  dl.doc-fields {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 16px;
+    margin: 14px 0 0;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--line);
+    align-items: baseline;
+  }
+  dl.doc-fields dt {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0;
+  }
+  dl.doc-fields dd {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: 14.5px;
+  }
+  dl.doc-fields a {
+    color: var(--decision-ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--decision-soft);
+  }
+  dl.doc-fields a:hover { border-bottom-color: var(--decision); }
+  dl.doc-fields code {
+    font-size: 13px;
+  }
+
+  /* ── Task section ──────────────────────────────────── */
+  section.task {
+    margin: 28px 0 0;
+  }
+  section.task > h2 {
+    font-family: var(--font-sans);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin: 0 0 14px;
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  section.task > h2 .range {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  section.task > .summary {
+    color: var(--ink-3);
+    font-size: 14.5px;
+    margin: 0 0 14px;
+  }
+
+  /* ── Notes list ────────────────────────────────────── */
+  .notes {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .note {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 64px 78px 1fr;
+    gap: 12px;
+    align-items: baseline;
+    color: var(--ink-2);
+    font-size: 16px;
+  }
+  .note:last-child { border-bottom: 0; }
+
+  .note .ts {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+
+  .note .tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 3px;
+    border: 1px solid;
+    width: max-content;
+    line-height: 1.35;
+  }
+  .note .tag.decision { color: var(--decision-ink); border-color: var(--decision); background: var(--decision-soft); }
+  .note .tag.change   { color: var(--change-ink);   border-color: var(--change);   background: var(--change-soft); }
+  .note .tag.tradeoff { color: var(--tradeoff-ink); border-color: var(--tradeoff); background: var(--tradeoff-soft); }
+  .note .tag.fyi      { color: var(--fyi-ink);      border-color: var(--line-strong); background: var(--fyi-soft); }
+
+  .note .body { color: var(--ink-2); }
+  .note .body strong { color: var(--ink); font-weight: 600; }
+  .note .body .why {
+    color: var(--ink-3);
+    font-style: italic;
+    font-size: 14.5px;
+  }
+
+  /* ── Inline code ───────────────────────────────────── */
+  code {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    background: var(--surface-3);
+    border: 1px solid var(--line);
+    padding: 0 5px;
+    border-radius: 3px;
+    color: var(--ink-2);
+  }
+
+  /* ── Highlights ────────────────────────────────────── */
+  mark {
+    background: rgba(252, 226, 130, 0.58);
+    color: inherit;
+    padding: 0 2px;
+    border-radius: 2px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  mark.alarm {
+    background: rgba(224, 79, 79, 0.22);
+  }
+  mark code {
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  /* ── Quoted phrases (verbatim user words) ──────────── */
+  q.verbatim {
+    font-style: italic;
+    color: var(--ink);
+    quotes: "“" "”" "‘" "’";
+    border-bottom: 1px dotted var(--line-strong);
+    padding-bottom: 1px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Implementation notes.</h1>
+<p class="doc-meta">Running log of decisions, changes, tradeoffs and FYIs made while executing the task. Newest items on top.</p>
+
+<dl class="doc-fields">
+  <dt>Spec</dt>
+  <dd><a href="./side-notes/SKILL.md"><code>./side-notes/SKILL.md</code></a> <span style="color:var(--ink-3);">— skill definition being designed in this session</span></dd>
+
+  <dt>Started</dt>
+  <dd>2026-05-19</dd>
+</dl>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<section class="task">
+  <h2>Plan the <code>side-notes</code> skill <span class="range">2026-05-19</span></h2>
+  <p class="summary">Brainstorming the skill while simultaneously using it on itself — this file is v2.</p>
+
+  <ul class="notes">
+
+    <li class="note">
+      <span class="ts">2026-05-19 14:24</span>
+      <span class="tag decision">decision</span>
+      <div class="body">
+        Added <mark>color highlighting via <code>&lt;mark&gt;</code></mark> for the single most important phrase per note (soft warm yellow, paper-marker feel), plus <code>&lt;mark class="alarm"&gt;</code> in pink for urgent / blocking items. Also added <code>&lt;q class="verbatim"&gt;</code> for quoting the user's exact phrasing when it's load-bearing. <span class="why">Why: user asked for color marking the most important bits so a reader can grasp a note's core at a glance; also dropped the earlier "no verbatim quoting" rule — when the user's exact words are the decision <q class="verbatim">you can quote me verbatim</q>, the quote is the most honest record.</span>
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 14:15</span>
+      <span class="tag decision">decision</span>
+      <div class="body">
+        Added a doc-level meta block (<code>&lt;dl class="doc-fields"&gt;</code>) under the H1 with two fields: <mark><strong>Spec</strong> (link to a file)</mark> and <strong>Started</strong> (date). Uppercase mono labels, top border to separate from the doc subtitle, indigo underlined link style for files. <span class="why">Why: user wants the running notes anchored to the spec/report they describe. Doc-level (one spec per file) rather than per-task — matches the "the notes belong to a spec" phrasing. Per-task spec link can be added later if a single notes file ends up spanning multiple specs.</span>
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 14:08</span>
+      <span class="tag change">change</span>
+      <div class="body">
+        Reverted timestamp (<code>.ts</code>) and tag pill (<code>.tag</code>) back to their pre-bump sizes: <code>13&nbsp;→&nbsp;11px</code> and <code>12&nbsp;→&nbsp;10px</code>. <span class="why">Why: user call — the metadata chrome (when + category) was competing with the body for attention after the +18% pass; smaller keeps them in the background.</span>
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 14:02</span>
+      <span class="tag change">change</span>
+      <div class="body">
+        <mark>Font-size bumped <strong>+18%</strong> across every declaration</mark> — body <code>14&nbsp;→&nbsp;16.5px</code>, h1 <code>28&nbsp;→&nbsp;33px</code>, task h2 <code>17&nbsp;→&nbsp;20px</code>, doc-meta + code <code>12&nbsp;→&nbsp;14px</code>, note body <code>13.5&nbsp;→&nbsp;16px</code>, .why <code>12.5&nbsp;→&nbsp;14.5px</code>, ts <code>11&nbsp;→&nbsp;13px</code>, tag pill <code>10&nbsp;→&nbsp;12px</code>, h2 range <code>10.5&nbsp;→&nbsp;12.5px</code>, summary <code>12.5&nbsp;→&nbsp;14.5px</code>. <span class="why">Why: user call — Plex at 14px was readable but undersold; at 16.5px the italic and the calligraphic features actually land.</span>
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 13:54</span>
+      <span class="tag change">change</span>
+      <div class="body">
+        Sans switched to <mark><strong>IBM Plex Sans</strong></mark> (weights 400/500/600/700 + italic) and mono to <mark><strong>JetBrainsMono Nerd Font</strong></mark>, falling back to <code>JetBrains Mono</code> on Google Fonts then system mono. H1 letter-spacing eased from <code>-0.025em</code> to <code>-0.015em</code> to suit Plex. <span class="why">Why: user wanted a beautiful italic — Plex's single-story italic <em>a</em> and calligraphic <em>g</em>/<em>f</em>/<em>y</em> show up well in the .why clauses, and Plex Sans pairs naturally with monospace technical content.</span>
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 13:54</span>
+      <span class="tag tradeoff">tradeoff</span>
+      <div class="body">
+        Broke the earlier "self-contained, no external fonts" decision — file now <code>&lt;link&gt;</code>s Google Fonts. <span class="why">Why: needed to evaluate Plex italic and have a portable JetBrains Mono fallback for readers without the Nerd Font installed. Revisit if we want the file to survive offline — option is to subset + base64-embed woff2s, at the cost of a much heavier file.</span>
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 13:48</span>
+      <span class="tag change">change</span>
+      <div class="body">
+        Line-height bumped to <code>1.35</code> across the board (body, note rows, tag pill). Top legend block removed. <span class="why">Why: user call — tags are self-explanatory from context, so the legend was just noise.</span>
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 13:42</span>
+      <span class="tag change">change</span>
+      <div class="body">
+        Visual handling pivoted from card-grid (badge | body | timestamp columns) to a flat list with hair separators, modelled on <code>mce-demo-portal/epic-notes.html</code>. <span class="why">Why: user pointed at the epic-notes file as the reference handling. Cards felt heavier than needed; the list scans more like a running journal.</span>
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 13:42</span>
+      <span class="tag change">change</span>
+      <div class="body">
+        Typography handling moved off serifs. Body and headings are now both sans (Inter / system); mono carries timestamps, tags and code. The H2 (task header) gets a top border + tight letter-spacing instead of a serif weight to signal section break. <span class="why">Why: the reference file uses sans + mono only — serif headings would clash with the lab-notebook feel.</span>
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 13:42</span>
+      <span class="tag decision">decision</span>
+      <div class="body">
+        Adopted the dotted-paper background (<code>radial-gradient</code> at 20 px) from epic-notes. <span class="why">Why: gives the file a paper-y feel without committing to a heavy theme; survives being opened in any browser since it's pure CSS.</span>
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 13:35</span>
+      <span class="tag fyi">fyi</span>
+      <div class="body">
+        Meta-loop: we're building <code>side-notes</code> and using it to take notes on building <code>side-notes</code>. The first note set is therefore about the skill design itself.
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 13:35</span>
+      <span class="tag decision">decision</span>
+      <div class="body">
+        Default location for the notes file: <code>./implementation-notes.html</code> in the cwd at skill activation. Single cumulative file across tasks; new task ⇒ new <code>&lt;section class="task"&gt;</code> prepended to the top.
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 13:35</span>
+      <span class="tag decision">decision</span>
+      <div class="body">
+        Initial category set (still open — pending your call from the earlier question): <strong>Decision</strong>, <strong>Change</strong>, <strong>Tradeoff</strong>, <strong>FYI</strong>. Color-coded pill tag per note.
+      </div>
+    </li>
+
+    <li class="note">
+      <span class="ts">2026-05-19 13:35</span>
+      <span class="tag tradeoff">tradeoff</span>
+      <div class="body">
+        Self-contained single HTML file (inline CSS, no external fonts/assets) over multi-file approach. <span class="why">Why: opens anywhere, survives moving, no asset pipeline — at the cost of bigger per-write diffs each time we append a note.</span>
+      </div>
+    </li>
+
+  </ul>
+</section>
+
+</body>
+</html>
