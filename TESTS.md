@@ -110,6 +110,88 @@ A pragmatic flow:
 
 ---
 
+## `taking-notes`
+
+The skill mandates HTML output, append-only file lifecycle, and a strict per-note structure. Three scenarios cover the failure modes.
+
+### Setup
+
+- Fresh session, no prior context.
+- Empty cwd (`/tmp/taking-notes-test/` works).
+- Only the `taking-notes` skill loaded (or all global skills — the description is specific enough that it shouldn't collide).
+- Don't paste SKILL.md content into the prompt; trigger via the description.
+
+### Scenarios
+
+#### 1. Fresh cwd — happy path
+> *"I'm starting work on a small CLI tool. Take side notes as we go. Decisions so far: (a) TypeScript over JS for type safety on config; (b) switched from yargs to commander; (c) tradeoff — loading whole config into memory instead of streaming; (d) FYI — the JSON shape is locked by a downstream Grafana consumer."*
+
+**Tests:**
+- File created at `./implementation-notes.html` (not `.md`, not `.txt`).
+- All four tag types present (`decision`, `change`, `tradeoff`, `fyi`).
+- CSS copied verbatim from the template (check `--decision: #5B5BF5` and IBM Plex Sans link present).
+- Each note has a `<span class="ts">` timestamp and a body.
+- `decision`/`change`/`tradeoff` notes have a `Why:` clause; `fyi` may or may not.
+- Newest note on top.
+- At most one `<mark>` per note.
+
+#### 2. Append-don't-overwrite — second task on the same file
+Pre-seed `./implementation-notes.html` with the scenario-1 output. Then:
+> *"New task: now adding logging support. Decision: using pino over winston — faster and simpler config. Side-note that."*
+
+**Tests:**
+- Original `<section class="task">` from scenario 1 still present.
+- New `<section class="task">` prepended *above* the existing one (not below, not replacing).
+- File was read before write (not blind-overwritten).
+- New section has its own h2 with the task name.
+
+#### 3. Pivot from markdown mid-conversation
+Open with: *"Can you keep notes in markdown for now, I want to paste them into Slack later."* The model produces markdown. Then:
+> *"Actually, side-notes this properly — switch to the real format."*
+
+**Tests:**
+- Model recognizes "side-notes this properly" as the skill trigger.
+- Migrates existing markdown notes into an HTML `implementation-notes.html`, preserving content.
+- Doesn't keep the markdown file around as a competing source of truth (deletes or notes it as superseded).
+- Doesn't ask permission to switch — the trigger is the instruction.
+
+### Rubric
+
+For each scenario, score 0–2 per criterion (no / partial / yes):
+
+| Criterion | Where it's tested |
+|---|---|
+| Output is `.html` extension | 1, 2, 3 |
+| CSS copied verbatim from template (not regenerated) | 1, 3 |
+| All four tag types used appropriately | 1 |
+| `Why:` clause on every decision/change/tradeoff | 1, 2, 3 |
+| At most one `<mark>` per note | 1, 2, 3 |
+| Newest-on-top ordering (notes within a task; tasks within file) | 1, 2 |
+| Append-don't-overwrite on second task | 2 |
+| Doc-level meta block (`Spec` + `Started`) present | 1 |
+| Recognizes trigger phrase variants ("side notes" / "side-note this" / "log this") | 1, 3 |
+| Doesn't paraphrase a load-bearing exact phrase | (opportunistic — score if user's verbatim words appear) |
+
+**Pass thresholds:**
+- Per scenario: ≥80% of applicable criteria.
+- Skill overall: 3/3 scenarios pass.
+
+### Interpreting failures
+
+| Failure pattern | What it tells you |
+|---|---|
+| Produces a `.md` file | Description's HTML emphasis isn't reaching the model — restore the workflow-summary in the description |
+| CSS regenerated / missing fonts | "Copy the `<head>` verbatim" instruction not strong enough — make it the first sentence of the template section |
+| Overwrites instead of appending | Lifecycle section needs to lead with "if file exists, read first" |
+| Multiple highlights per note | Tighten the "exactly one" wording in Note structure |
+| Doesn't trigger on "log this" | Trigger phrase missing from description |
+
+### Tooling
+
+Use `skill-creator` for variance analysis once manual scenarios all pass. Single-shot scores are misleading.
+
+---
+
 ## Other skills
 
 > _TODO: add test plans for `regression-dog`, `building-ripe-components`, `building-ripe-routing`, `ripe-init` as needed._
