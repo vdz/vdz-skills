@@ -1,4 +1,4 @@
-# Editorial — a style for html-reports
+# Editorial — a style for html-report
 
 > A literary broadsheet: a serif-display masthead and a warm dotted-paper ground
 > with a single white "sheet" floating on it. Reads like a printed explainer or

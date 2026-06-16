@@ -1,4 +1,4 @@
-# Ledger — a style for html-reports
+# Ledger — a style for html-report
 
 > A warm paper-and-ink decision record: a single 920px column of serif headings, mono labels, and rust-terracotta accents, where every ticket is a card and the only dark surface is the verbatim client ask. Canonical example: `examples/ledger.html` (to be derived — see note below).
 

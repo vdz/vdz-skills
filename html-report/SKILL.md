@@ -1,5 +1,5 @@
 ---
-name: html-reports
+name: html-report
 description: Use when the user wants a single, self-contained, *beautiful* HTML report — phrases like "make an HTML report", "write this up as a report", "a process/flow explainer", "a decision record / spec-decision report", "a shareable write-up of what we did and why". Triggers when the deliverable is a polished standalone .html document (one file, no build, opens in any browser) meant to be read and kept, not a dashboard or a slide deck.
 ---
 
@@ -42,6 +42,25 @@ before writing — it names every token and component so you reproduce, not rein
 When the user names a style, use it. When they don't, infer from the content shape
 above and say which you chose.
 
+## Choosing structure & tooling
+
+Before picking a *style* (the look), decide two things from the report's **job**:
+
+1. **Internal organization** — how the content is shaped: a continuous *narrative*,
+   *enumerated* per-item entries, *side-by-side* comparison, a *spatial* diagram/map,
+   a *timeline*, or *tabular* data. This is what makes a report legible; pick it from
+   the content, not the style.
+2. **Interactive tooling** — only the affordances the job actually needs: inline notes,
+   copy/export, theme switch, collapsibles, a TOC/scrollspy, tabs, editable fields,
+   drag-to-reorder. Every interaction must earn its place; a report that's only read
+   needs almost none.
+
+These two choices come **first** and usually imply the style. The full decision
+framework — organization × tooling, with the questions to ask — is in
+[`reference/choosing.md`](reference/choosing.md). For a concrete need→organization→
+style→tooling lookup across ~20 report kinds, see [`reference/example-map.md`](reference/example-map.md).
+The copy-paste implementations of each interaction live in [`reference/tooling.md`](reference/tooling.md).
+
 ## The artifact
 
 One `.html` file at a path the user names (or a sensible default like
@@ -52,7 +71,9 @@ survive a reload but never touch a server.
 
 ## Workflow
 
-1. **Pick the style** (above). If unsure between two, ask; otherwise choose and say so.
+1. **Decide organization + tooling, then style** (see *Choosing structure & tooling*
+   and [`reference/example-map.md`](reference/example-map.md)). If unsure between two
+   styles, ask; otherwise choose and say so.
 2. **Read that style's spec** in [`styles/`](styles/) — it is the source of truth for
    the *why* and names every token/component. Skim the canonical example's `<head>`.
 3. **Copy the canonical HTML** for that style as your starting point. Keep the entire
