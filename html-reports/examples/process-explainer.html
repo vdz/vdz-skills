@@ -1,0 +1,1137 @@
+<!doctype html>
+<!--
+  html-reports — process / flow explainer (revision 2).
+  Layout: a white sheet on a dotted ground; a fixed main column with a right-aligned
+  left rail (numbers, actors, the "what you do") divided by a hairline; code flies out
+  to the RIGHT on demand as a Tokyo-Night panel; notes are a ruled write-on line.
+  Tokens are the working draft of the house system — see design-system.md.
+-->
+<html lang="en" data-palette="dusk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pre-auth link for remote-surface — explainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Caveat:wght@500;600&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=JetBrains+Mono:wght@400;500;600;700&family=Literata:ital,opsz,wght@0,7..72,200..900;1,7..72,200..900&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" />
+<style>
+  :root {
+    /* ===== PALETTE: Daylight (default) — warm paper, constructivist inks ===== */
+    /* paper & ink — lightened ~25% */
+    --paper:#F5F1E9; --sheet:#FFFEFC; --dot:#E6E0D2;
+    --ground:#FBF6EC;   /* the furthest layer — the dotted page behind the sheet; its own color, not palette-bound */
+    --card-bg:#F4ECDC;  /* bordered-block fill — live-adjustable via the footer tool */
+    --card-border:rgba(33,29,23,.05);  /* bordered-block hairline @ 5% */
+    --rule:#ECE7DB; --rule-2:#D8D1C2;
+    --ink:#1E1A14; --ink-strong:#231E16; --ink-2:#4A443A; --ink-3:#8A8270;
+    /* Bauhaus / Constructivist + muted ink-colours for lane identity */
+    --red:#BF3B2A; --red-ink:#8C2719; --red-soft:#F2DFD9;
+    --blue:#2C497F; --blue-ink:#23396A; --blue-soft:#DFE4EE;
+    --ochre:#C28A1E; --ochre-ink:#6E5212; --ochre-soft:#F2E7C9;
+    --green:#3F7A57; --green-soft:#DEEADD;
+    --violet:#6B4E8A; --gray:#8A8270;
+    --code-mark:rgba(247,206,84,.46);  /* inline-code marker — yellow watercolor */
+    --mark:rgba(120,172,222,.34);      /* emphasis — light-blue watercolor */
+    /* Tokyo Night */
+    --tn-bg:#1a1b26; --tn-bar:#16161e; --tn-fg:#a9b1d6; --tn-dim:#565f89;
+    --tn-comment:#8089bd; --tn-kw:#bb9af7; --tn-str:#9ece6a; --tn-num:#ff9e64; --tn-fn:#7aa2f7;
+    --ink-line:rgba(33,29,23,.32);  /* thin ink hairline for bordered blocks */
+    /* measure & rhythm */
+    --rail-w:8.5rem; --main-w:55rem; --gutter:2.25rem; --rhythm:1.85rem; --notes-w:40%;
+    /* ONE vertical spacer. Every vertical gap is this, or an integer multiple of it. */
+    --space:calc(var(--rhythm)*1.25);    /* the base step between any two blocks */
+    --flow:var(--space);                 /* between elements inside a block = 1× */
+    --section:calc(var(--space)*2);      /* between sections (grid rows)      = 2× */
+    --s-xs:calc(var(--rhythm)*.5); --s-sm:calc(var(--rhythm)*.75); --s-md:var(--rhythm);
+    --s-lg:calc(var(--rhythm)*1.5); --s-xl:calc(var(--rhythm)*2); --s-2xl:calc(var(--rhythm)*3);
+    --sheet-pad-x:3rem; --sheet-pad-y:var(--s-2xl);  /* sheet inset — footer breaks out by these */
+    --serif-display:"Literata",Georgia,serif;
+    --serif-text:"Source Serif 4","Iowan Old Style",Georgia,serif;
+    --mono:"JetBrainsMono Nerd Font","JetBrainsMono Nerd Font Mono","JetBrains Mono",ui-monospace,Menlo,monospace;
+  }
+
+  /* ===== PALETTE: Dusk (alternative) — cool slate paper, blueprint inks ===== */
+  /* Switch with the footer “Palette” tool; only colour tokens change, never type or rhythm. */
+  html[data-palette="dusk"]{
+    --paper:#E8EBF0; --sheet:#F7F9FC; --dot:#CFD6E1;
+    --rule:#DCE1EA; --rule-2:#BFC8D6;
+    --ink:#14171E; --ink-strong:#191D27; --ink-2:#3B4351; --ink-3:#78818F;
+    --red:#C0473A; --red-ink:#8C2C20; --red-soft:#EFDAD5;
+    --blue:#2F5AA8; --blue-ink:#264B8E; --blue-soft:#DBE3F3;
+    --ochre:#B0882C; --ochre-ink:#5C4715; --ochre-soft:#EBE2C7;
+    --green:#2F7268; --green-soft:#D2E6E1;
+    --violet:#5C4E96; --gray:#78818F;
+    --code-mark:rgba(247,206,84,.40);    /* code stays warm yellow — the meaning is constant */
+    --mark:rgba(95,150,212,.34);         /* emphasis — cooler blue wash */
+    --ink-line:rgba(20,23,30,.32);
+  }
+  html[data-palette="vivid"]{        /* user-chosen palette — paper corrected to #e8eaed */
+    --paper:#E8EAED; --sheet:#F3F3EC; --dot:#D4D8DD;
+    --rule:#DEE1E5; --rule-2:#C6CBD2;
+    --ink:#2D52BE; --ink-strong:#2747A5; --ink-2:#475785; --ink-3:#727EA1;
+    --red:#BF463A; --red-ink:#752821; --red-soft:#EDDFDE;
+    --blue:#1A1AE5; --blue-ink:#0D0D8C; --blue-soft:#DADAF1;
+    --ochre:#F3C13A; --ochre-ink:#AE8106; --ochre-soft:#F2EBD9;
+    --green:#3DA838; --green-ink:#236620; --green-soft:#DFEDDE;
+    --violet:#5C4E96; --gray:#727EA1;
+    --code-mark:rgba(247,206,84,.40);
+    --mark:rgba(26,26,229,.18);
+    --ink-line:rgba(39,71,165,.30);
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html{font-size:16px;scroll-behavior:smooth;}
+  body{margin:0;color:var(--ink-strong);font-family:var(--serif-text);
+    font-size:1.1875rem;line-height:var(--rhythm);
+    font-feature-settings:"onum" 1,"liga" 1,"kern" 1;text-rendering:optimizeLegibility;
+    -webkit-font-smoothing:antialiased;hanging-punctuation:first last;
+    background-color:var(--ground);
+    background-image:radial-gradient(var(--dot) 1.4px, transparent 1.7px);
+    background-size:22px 22px;}
+
+  /* utility bar — sits on the dotted ground */
+  .bar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:var(--s-md);
+    padding:calc(var(--rhythm)/3) clamp(1rem,4vw,3rem);
+    background:color-mix(in srgb,var(--blue) 82%,transparent);backdrop-filter:blur(6px);}
+  .bar .id{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--blue-soft);}
+  .bar button{font-family:var(--mono);font-size:.74rem;font-weight:500;padding:.4em .9em;border:none;
+    background:var(--sheet);color:var(--blue-ink);border-radius:2px;cursor:pointer;}
+  .bar .status{font-family:var(--mono);font-size:.72rem;color:var(--blue-soft);margin-left:auto;}
+
+  /* the white sheet, floating on the dots with a contact shadow */
+  .sheet{max-width:calc(var(--rail-w) + var(--gutter) + var(--main-w) + 6rem);
+    margin:var(--s-2xl) auto var(--s-2xl);background:var(--sheet);border-radius:3px;
+    padding:var(--sheet-pad-y) var(--sheet-pad-x);
+    box-shadow:0 1px 1px rgba(30,26,20,.05), 0 24px 60px -18px rgba(30,26,20,.22);}
+
+  /* the rail+main grid — uniform vertical rhythm via a single row-gap */
+  .doc{position:relative;display:grid;
+    grid-template-columns:var(--rail-w) var(--main-w);column-gap:var(--gutter);
+    row-gap:var(--section);}
+  .row{display:contents;}
+  .row > .rail{grid-column:1;text-align:right;color:var(--ink-3);}
+  .row > .main{grid-column:2;position:relative;min-width:0;}
+  .full{grid-column:1 / -1;}
+  /* one spacer governs all vertical flow: reset, then a single step between siblings */
+  .main > *{margin:0;} .rail > *{margin:0;}
+  .main > * + *{margin-top:var(--space);}
+  .rail > * + *{margin-top:calc(var(--rhythm)/3);}
+
+  /* headings — weighty, no underlines, +25% scale */
+  .kicker{font-family:var(--mono);font-size:.8rem;font-weight:500;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--red-ink);}
+  h1.title{font-family:var(--serif-display);font-optical-sizing:auto;font-weight:900;
+    font-size:4.25rem;line-height:1.0;letter-spacing:-.02em;color:var(--ink);text-wrap:balance;}
+  .standfirst{font-size:1.34rem;line-height:calc(var(--rhythm)*1.12);color:var(--ink-2);}
+  h2{font-family:var(--serif-display);font-weight:900;font-size:2.65rem;line-height:1.06;
+    letter-spacing:-.014em;color:var(--ink);}
+  h3{font-family:var(--serif-display);font-weight:800;font-size:1.8rem;line-height:1.1;
+    letter-spacing:-.01em;color:var(--ink);}
+
+  /* per-step "done" checkbox — sits right after the step title; checking it
+     strikes the title through and dims it. State persists in localStorage. */
+  .step-title{display:flex;align-items:center;gap:var(--s-md);}
+  .step-title h3{margin:0;}
+  .done-box{flex:none;appearance:none;-webkit-appearance:none;margin:auto 0;
+    width:1.6rem;height:1.6rem;border:2px solid var(--ink-3);border-radius:5px;
+    background-color:transparent;display:grid;place-content:center;cursor:pointer;
+    transition:border-color .15s ease,background .15s ease;}
+  .done-box::before{content:"✓";font-family:var(--mono);font-size:1.05rem;font-weight:700;
+    line-height:1;color:var(--sheet);transform:scale(0);transition:transform .12s ease;}
+  .done-box:hover{border-color:var(--ink-2);}
+  .done-box:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+  .done-box:checked{background:var(--green-ink);border-color:var(--green-ink);}
+  .done-box:checked::before{transform:scale(1);}
+  .step.done h3{text-decoration:line-through;text-decoration-thickness:2px;
+    text-decoration-color:var(--ink-3);color:var(--ink-3);transition:color .15s ease;}
+
+  dl.meta{display:grid;grid-template-columns:max-content 1fr;gap:calc(var(--rhythm)/4) var(--s-md);
+    align-items:baseline;}
+  dl.meta dt{font-family:var(--mono);font-size:.72rem;font-weight:500;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--ink-3);margin:0;}
+  dl.meta dd{margin:0;color:var(--ink-2);font-size:.92rem;font-family:var(--mono);}
+
+  p{margin:0;color:var(--ink-strong);}
+  strong{color:var(--ink);font-weight:600;}
+  em{font-style:italic;}
+  mark{background:var(--mark);padding:0 .3em;
+    clip-path:polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+    -webkit-box-decoration-break:clone;box-decoration-break:clone;}
+  a{color:var(--blue-ink);text-underline-offset:2px;}
+
+  /* inline code — JetBrains Mono, no border, a marker-stroke wash */
+  code{font-family:var(--mono);font-size:.86em;font-weight:500;color:var(--ink);
+    background:linear-gradient(transparent 12%, var(--code-mark) 12%, var(--code-mark) 86%, transparent 86%);
+    padding:0 .3em;clip-path:polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);}
+
+  /* raw ask — clean white card, thin ink hairline */
+  .raw-ask{background:var(--card-bg);border:1px solid var(--card-border);border-radius:3px;
+    padding:var(--s-sm) var(--s-md);margin:0;}
+  .raw-ask .label{font-family:var(--mono);font-size:.72rem;font-weight:600;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--red-ink);display:block;margin-bottom:calc(var(--rhythm)/4);}
+  .raw-ask q{font-style:italic;color:var(--ink-strong);quotes:"\201C" "\201D";font-size:1.04rem;}
+
+  /* visuals — a real paper graph laid wider than the sheet, with a tiny contact shadow */
+  figure.swim{margin:0 0 0 50%;width:min(92vw,1240px);transform:translateX(-50%);
+    background:#fff;padding:var(--s-md) var(--s-lg) var(--s-sm);border-radius:4px;
+    box-shadow:0 2px 3px rgba(30,26,20,.10), 0 18px 44px -20px rgba(30,26,20,.22);}
+  figure.swim svg{width:100%;height:auto;display:block;}
+  figure .caption{font-style:italic;font-size:.92rem;color:var(--ink-3);margin-top:calc(var(--rhythm)/3);text-align:center;}
+  /* photo — a polaroid plate: thin top/side lips, deep bottom lip, soft contact shadow */
+  figure.photo{margin:var(--space) 0 0;}   /* sits on the shared vertical spacer */
+  figure.photo .frame{position:relative;background:#fff;border-radius:3px;
+    padding:4.2% 4.2% 4.2%;   /* equal lips… */
+    box-shadow:0 2px 3px rgba(30,26,20,.10), 0 16px 40px -22px rgba(30,26,20,.30);}
+  figure.photo img{display:block;width:100%;height:auto;border-radius:1px;}
+  /* handwritten caption — blue ink, scrawled across the deep bottom lip */
+  figure.photo .handnote{font-family:var(--mono);font-weight:400;
+    font-size:.92rem;line-height:1.55;color:var(--blue-ink);text-align:left;
+    margin:7.5% 30% 0;padding-bottom:1.7em;   /* 30% margin each side, text flush left; deep bottom lip */
+    display:block;}
+  figure.photo .handnote .fignum{font-weight:600;margin-right:.35em;}
+  figure.photo .handnote code{font-family:inherit;font-weight:600;background:none;
+    color:inherit;padding:0;clip-path:none;font-size:1em;}
+  /* asset name + download — tiny mono, pinned to the very bottom edge, surfaced on hover */
+  figure.photo .asset{position:absolute;left:4.2%;right:4.2%;bottom:1.1em;
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-family:var(--mono);font-size:.68rem;letter-spacing:.02em;
+    opacity:0;transition:opacity .18s ease;}
+  figure.photo .frame:hover .asset,
+  figure.photo .frame:focus-within .asset{opacity:.6;}
+  figure.photo .asset a{color:var(--ink-3);text-decoration:none;}
+  figure.photo .asset a:hover{color:var(--ink);text-decoration:underline;}
+  figure.photo .asset .dl::before{content:"↓ ";}
+  .swim a{cursor:pointer;}
+  .swim a:hover .node{transform:scale(1.14);transform-box:fill-box;transform-origin:center;}
+  .swim .node{transition:transform .12s;}
+
+  /* steps: rail content right-aligned, main fixed width */
+  .step{display:contents;}
+  .step .rail{padding-top:0;}
+  .step .main{padding:0;}
+  .rail .num{font-family:var(--serif-display);font-weight:500;font-size:2.4rem;color:var(--ink-3);
+    line-height:1;display:block;}
+  .rail .pills{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+  .pill{font-family:var(--mono);font-size:.76rem;font-weight:600;letter-spacing:.01em;opacity:.8;}
+  .pill.script{color:var(--gray);} .pill.you{color:var(--blue);} .pill.imp{color:var(--red);}
+  .pill.cfg{color:var(--violet);} .pill.tiny{color:var(--blue-ink);}
+  .pill.tv{color:var(--ink-2);} .pill.app{color:var(--ink);}
+  .rail .action{font-style:italic;color:var(--ink-3);font-size:.9rem;line-height:1.4;
+    overflow-wrap:anywhere;}
+  /* code in the rail stays quiet — no marker wash, inherits the muted ink, wraps */
+  .rail .action code{background:none;padding:0;clip-path:none;color:inherit;
+    font-weight:500;font-size:.92em;font-style:normal;overflow-wrap:anywhere;}
+  .body :last-child{margin-bottom:0;}
+
+  /* code on request — a quiet typographic disclosure, not a filled button.
+     The dark stays reserved for the code panel itself. */
+  .toggle{font-family:var(--mono);font-size:.8rem;font-weight:500;letter-spacing:.02em;
+    color:var(--ink-2);background:none;border:none;padding:0;cursor:pointer;
+    display:inline-flex;align-items:baseline;gap:.5em;}
+  .toggle::before{content:"▸";color:var(--blue);font-size:.9em;}
+  .toggle.open::before{content:"▾";}
+  .toggle:hover{color:var(--ink);}
+  .code-panel{display:none;}
+  .code-panel.open{display:block;position:relative;margin-top:var(--space);width:100%;
+    border-radius:6px;overflow:hidden;box-shadow:0 12px 34px -14px rgba(18,18,28,.45);}
+  .code-panel .filepath{font-family:var(--mono);font-size:.74rem;color:var(--tn-dim);
+    background:var(--tn-bar);padding:.6em .9em;margin:0;}
+  .code-panel pre{margin:0;padding:var(--s-sm) var(--s-md);overflow:auto;
+    background:var(--tn-bg);color:var(--tn-fg);font-family:var(--mono);font-size:.92rem;
+    font-weight:400;line-height:1.62;border:none;}
+  pre .k{color:var(--tn-kw);} pre .s{color:var(--tn-str);} pre .c{color:var(--tn-comment);font-style:italic;}
+  pre .n{color:var(--tn-num);} pre .f{color:var(--tn-fn);}
+  .hint{font-family:var(--mono);font-weight:400;color:var(--ink-3);font-size:.78rem;}
+
+  /* standalone code in main flow — also Tokyo Night */
+  pre.block{position:relative;margin:0;padding:var(--s-sm) var(--s-md);overflow:auto;border-radius:6px;
+    background:var(--tn-bg);color:var(--tn-fg);font-family:var(--mono);font-size:.94rem;line-height:1.62;
+    box-shadow:0 10px 30px -12px rgba(20,20,30,.4);}
+
+  /* copy button on every code block */
+  .copy-btn{position:absolute;top:.5rem;right:.55rem;z-index:3;font-family:var(--mono);font-size:.68rem;
+    font-weight:500;padding:.28em .65em;border:none;border-radius:3px;cursor:pointer;
+    background:rgba(169,177,214,.16);color:#a9b1d6;}
+  .copy-btn:hover{background:rgba(169,177,214,.30);}
+  .copy-btn.done{color:var(--tn-str);}
+
+  /* notes — a write-on line in bluish ink. The control geometry never changes on
+     hover; the white card is a separate bleed layer (::before), so nothing shifts. */
+  /* align-items:flex-start (not baseline) so the toggle stays put when the note
+     block reparents out on expand — baseline would anchor it to the tall note. */
+  .foot{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--gutter);}
+  .note-row{display:flex;flex-direction:column;align-items:flex-end;width:var(--notes-w);}
+  .note-row label{font-family:var(--mono);font-weight:600;font-size:.91rem;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--ink-3);margin-bottom:.85rem;}
+  .note-field{position:relative;display:block;width:100%;}
+  /* the lift card — bleeds 10px out (20px to the left), painted behind, no reflow */
+  .note-field::before{content:"";position:absolute;inset:-10px -10px -10px -20px;
+    background:var(--sheet);border-radius:4px;opacity:0;pointer-events:none;
+    transition:opacity .15s ease;
+    box-shadow:0 1px 2px rgba(30,26,20,.08), 0 12px 30px -16px rgba(30,26,20,.40);}
+  .note-field:hover::before,.note-field:focus-within::before{opacity:1;}
+  .note-row textarea{position:relative;z-index:1;display:block;box-sizing:border-box;width:100%;
+    min-height:1.7em;padding:.1em 0 .25em;
+    font-family:var(--serif-text);font-style:italic;font-size:1.05rem;line-height:1.5;
+    color:var(--blue-ink);background:transparent;border:none;
+    border-bottom:1.5px solid rgba(44,73,127,.42);
+    border-radius:0;resize:none;overflow:hidden;transition:border-color .15s ease;}
+  .note-row textarea::placeholder{color:var(--ink-3);font-style:italic;}
+  /* on lift, the resting underline yields to the card */
+  .note-field:hover textarea,.note-field:focus-within textarea{outline:none;border-bottom-color:transparent;}
+
+  /* COLUMN layout — notes become a full-height column on the right of the step;
+     label pins to the top (≈ the View-code line), the write-on line to the bottom. */
+  html[data-notes="column"] .foot{display:block;}
+  /* prose holds the left ~60% at all times, so expanding the code never reflows it
+     (no reflow → the View/Hide-code toggle never jumps vertically) */
+  html[data-notes="column"] .step .main > .step-title,
+  html[data-notes="column"] .step .main > p,
+  html[data-notes="column"] .step .main > ul,
+  html[data-notes="column"] .step .main > .foot{
+    width:calc(100% - var(--notes-w) - var(--gutter));}
+  html[data-notes="column"] .step .note-row{position:absolute;top:0;right:0;bottom:0;
+    width:var(--notes-w);justify-content:space-between;}
+  /* code expanded — the note flows in BELOW the full-width code block
+     (JS reparents it after the code panel; here we just restyle it) */
+  .main.code-open > .note-row{width:var(--notes-w);margin-left:auto;}
+  html[data-notes="column"] .step .main.code-open > .note-row{position:static;
+    justify-content:flex-start;}
+
+  /* side-by-side panels — clean white cards, thin ink hairline */
+  .two-up{display:grid;grid-template-columns:1fr 1fr;gap:var(--gutter);}
+  .panel{background:var(--card-bg);border:1px solid var(--card-border);border-radius:3px;
+    padding:var(--s-sm) var(--s-md);}
+  .panel.pick{border-color:var(--ink);}
+  .panel .ptitle{font-family:var(--mono);font-size:.74rem;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-3);margin-bottom:calc(var(--rhythm)/3);}
+  .url{font-family:var(--mono);font-size:.82rem;font-weight:500;word-break:break-all;color:var(--ink-2);
+    background:#fff;padding:.6em .7em;border-radius:3px;line-height:1.5;}
+  .url .host{color:var(--blue-ink);} .url .qs{color:var(--red-ink);} .url .hash{color:var(--ink);font-weight:700;}
+  .panel .count{font-family:var(--mono);font-size:.76rem;color:var(--ink-3);margin-top:calc(var(--rhythm)/3);}
+
+  /* callout — clean white card, thin ink hairline */
+  .callout{background:var(--card-bg);border:1px solid var(--card-border);border-radius:3px;
+    padding:var(--s-sm) var(--s-md);margin:0;}
+  .callout .tag{font-family:var(--mono);font-size:.72rem;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-2);display:block;margin-bottom:calc(var(--rhythm)/4);}
+  .callout :last-child{margin-bottom:0;}
+  ul.tight{margin:0;padding-left:1.1em;}
+
+  /* footer — a recessed paper tray holding small report tools */
+  .tools{background:var(--paper);border-radius:4px;
+    padding:var(--s-lg) var(--s-md);min-height:calc(var(--rhythm)*5);
+    display:flex;flex-direction:column;justify-content:center;gap:calc(var(--rhythm)/2);}
+  /* full-bleed footer band — breaks out to the sheet's edges with its own ground color */
+  .tools.full{margin:0 calc(-1 * var(--sheet-pad-x)) calc(-1 * var(--sheet-pad-y));
+    padding:var(--s-xl) var(--sheet-pad-x);background:var(--dot);
+    border-top:1px solid var(--rule);border-radius:0 0 3px 3px;}
+  .tools .tools-ph{font-family:var(--mono);font-size:.82rem;color:var(--ink-3);}
+  .tool{display:flex;align-items:center;gap:var(--s-sm);flex-wrap:wrap;}
+  .tool .tlabel{font-family:var(--mono);font-size:.74rem;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ink-3);}
+  .swatches{display:flex;gap:.4rem;}
+  .swatch{width:1.5rem;height:1.5rem;border-radius:3px;cursor:pointer;padding:0;
+    border:1px solid var(--ink-line);position:relative;transition:transform .08s ease;}
+  .swatch:hover{transform:translateY(-2px);}
+  .swatch[aria-pressed="true"]{outline:1.5px solid var(--ink);outline-offset:1.5px;}
+  .tool .custom{display:inline-flex;align-items:center;gap:.4rem;}
+  .tool input[type=color]{width:1.7rem;height:1.7rem;border:1px solid var(--ink-line);
+    border-radius:3px;background:none;padding:0;cursor:pointer;}
+  .tool .val{font-family:var(--mono);font-size:.74rem;color:var(--ink-2);min-width:5.2em;}
+  .tool .reset{font-family:var(--mono);font-size:.72rem;color:var(--ink-2);
+    background:none;border:none;border-bottom:1px solid var(--ink-line);
+    padding:0 0 1px;cursor:pointer;}
+  .tool .reset:hover{color:var(--ink);}
+  /* palette editor — labelled mini swatches for live token prototyping */
+  .pe{display:inline-flex;align-items:center;gap:.35rem;}
+  .pe>span{font-family:var(--mono);font-size:.72rem;color:var(--ink-2);}
+  /* segmented palette switch */
+  .seg{display:inline-flex;border:1px solid var(--rule-2);border-radius:4px;overflow:hidden;}
+  .seg-opt{font-family:var(--mono);font-size:.74rem;letter-spacing:.02em;color:var(--ink-2);
+    background:transparent;border:none;border-left:1px solid var(--rule-2);padding:.3em .8em;cursor:pointer;}
+  .seg-opt:first-child{border-left:none;}
+  .seg-opt:hover{color:var(--ink);}
+  .seg-opt[aria-pressed="true"]{background:var(--ink);color:var(--sheet);}
+  /* opacity slider — slim ink track */
+  .tool input[type=range]{-webkit-appearance:none;appearance:none;width:7rem;height:2px;
+    background:var(--rule-2);border-radius:2px;cursor:pointer;}
+  .tool input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:.85rem;height:.85rem;border-radius:50%;background:var(--ink);border:none;cursor:pointer;}
+  .tool input[type=range]::-moz-range-thumb{width:.85rem;height:.85rem;border-radius:50%;
+    background:var(--ink);border:none;cursor:pointer;}
+  ul.tight li{margin-bottom:calc(var(--rhythm)/3);color:var(--ink-strong);}
+
+  @media (max-width:1180px){
+    .doc{grid-template-columns:6rem 1fr;}
+    :root{--main-w:auto;}
+  }
+  @media (max-width:680px){
+    :root{--sheet-pad-x:1.25rem; --sheet-pad-y:var(--s-xl);}
+    .doc{grid-template-columns:1fr;} .doc::before{display:none;}
+    .row > .rail{grid-column:1;text-align:left;}
+    .rail .pills{flex-direction:row;align-items:flex-start;}
+    .two-up{grid-template-columns:1fr;}
+    h1.title{font-size:2.8rem;}
+  }
+
+  /* serif comparison overlay — every candidate renders the same specimen at once */
+  .serif-compare{position:fixed;inset:0;z-index:100;overflow:auto;
+    display:grid;place-items:start center;padding:clamp(1rem,5vh,4rem) 1rem;
+    background:color-mix(in srgb,var(--paper) 62%,#0a0a0a 16%);backdrop-filter:blur(5px);}
+  .serif-compare[hidden]{display:none;}
+  .sc-card{width:min(64rem,100%);background:var(--sheet);border-radius:6px;
+    box-shadow:0 30px 90px -24px rgba(20,20,30,.5);padding:var(--s-xl) var(--s-xl) var(--s-lg);}
+  .sc-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s-md);
+    margin-bottom:var(--s-md);}
+  .sc-head h4{font-family:var(--serif-display);font-weight:600;font-size:1.7rem;color:var(--ink);margin:0;}
+  .sc-head .sub{font-family:var(--mono);font-size:.74rem;color:var(--ink-3);margin-left:auto;}
+  .sc-close{font-family:var(--mono);font-size:.78rem;color:var(--ink-2);background:none;
+    border:1px solid var(--rule-2);border-radius:3px;padding:.35em .85em;cursor:pointer;
+    transition:color .12s,border-color .12s;}
+  .sc-close:hover{color:var(--ink);border-color:var(--ink-3);}
+  .specs{display:flex;flex-direction:column;}
+  .spec{display:block;width:100%;text-align:left;background:transparent;cursor:pointer;
+    border:1px solid transparent;border-top-color:var(--rule);border-radius:5px;
+    padding:var(--s-md);transition:background .12s ease,border-color .12s ease;}
+  .spec:hover{background:var(--paper);border-color:var(--rule-2);}
+  .spec.active{background:var(--paper);border-color:var(--ink-3);}
+  .spec-name{display:block;font-family:var(--mono);font-size:.7rem;font-weight:600;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:.45rem;}
+  .spec.active .spec-name::after{content:" — active";color:var(--green-ink);}
+  .spec-display{display:block;font-family:var(--sf);font-weight:600;font-size:2.5rem;
+    line-height:1.04;letter-spacing:-.01em;color:var(--ink);}
+  .spec-ramp{display:flex;flex-wrap:wrap;gap:1.4rem;margin-top:.55rem;
+    font-family:var(--sf);font-size:1.7rem;line-height:1;color:var(--ink-2);}
+  .spec-ital{display:block;margin-top:.5rem;font-family:var(--sf);font-style:italic;
+    font-size:1.2rem;color:var(--ink-2);}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <span class="id">Pre-auth link · 2026-06-15</span>
+  <span class="status" id="copy-status"></span>
+  <button id="copy-notes" title="Copy every note you've written across all steps to the clipboard, as plain text">Copy all notes</button>
+</div>
+
+<div class="sheet">
+<div class="doc">
+
+  <div class="row">
+    <div class="rail"><p class="kicker">Process</p></div>
+    <header class="main">
+      <p class="kicker" style="color:var(--red-ink)">remote-surface</p>
+      <h1 class="title">Pre-auth link for remote-surface</h1>
+      <p class="standfirst">How a customer reaches the demo from a single smart-TV URL, end to
+        end — JWT minting, TTL, and the tiny-URL hop that makes it typeable.</p>
+      <dl class="meta">
+        <dt>Date</dt><dd>2026-06-15</dd>
+        <dt>Scope</dt><dd>impersonator → TinyURL → remote-surface</dd>
+        <dt>Status</dt><dd>stageable, ships with the PR</dd>
+      </dl>
+    </header>
+  </div>
+
+  <div class="row">
+    <div class="rail"></div>
+    <div class="main">
+      <div class="raw-ask">
+        <span class="label">Raw ask</span>
+        <q>Stage this … what do I do to test this and create an actual link, see it in the
+          impersonator tool, how can it be used on the web. And remember the longer TTL.
+          There's an option for tiny url … since our clients insert the URL into a smart TV,
+          give them the shortest &amp; simplest URL. Find out more on how this works.</q>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="rail"></div>
+    <div class="main">
+      <h2>The picture</h2>
+      <p>The customer types <strong>one URL</strong> into a smart TV. Behind it: a JWT minted by
+        the impersonator against a long-TTL <code>AppClient</code> record, optionally shortened by
+        the MCE TinyURL service so nobody types 2&nbsp;000 characters on a remote. The receiving
+        app (<code>remote-surface</code>) detects <code>?auth_token=</code>, hands the token to its
+        platform shell, and proceeds <mark>as if SSO had happened</mark>. No login screen on the TV.</p>
+      <figure class="photo">
+        <div class="frame">
+          <img src="tv-screen.svg" alt="A smart TV displaying the remote-surface demo, already signed in, with the pre-auth URL shown along the top bar.">
+          <figcaption class="handnote"><span class="fignum">Fig 1 —</span>what the customer sees:
+            the TV opens the short URL and lands inside the demo, signed in, no login prompt
+            — the JWT in <code>?auth_token=</code> did the work.</figcaption>
+          <div class="asset">
+            <a class="name" href="tv-screen.svg" target="_blank" rel="noopener" title="Open the source asset">tv-screen.svg</a>
+            <a class="dl" href="tv-screen.svg" download title="Download this asset">download</a>
+          </div>
+        </div>
+      </figure>
+    </div>
+  </div>
+
+  <!-- FULL-BLEED SWIMLANE -->
+  <figure class="swim full">
+    <svg viewBox="0 0 1200 560" role="img" aria-label="Swimlane of the eight-step flow across seven actors">
+      <g font-family="JetBrainsMono Nerd Font, JetBrains Mono, monospace" font-size="12.5" fill="#8A8270">
+        <line x1="232" y1="96"  x2="1176" y2="96"  stroke="#E3DDCF"/>
+        <line x1="232" y1="160" x2="1176" y2="160" stroke="#E3DDCF"/>
+        <line x1="232" y1="224" x2="1176" y2="224" stroke="#E3DDCF"/>
+        <line x1="232" y1="288" x2="1176" y2="288" stroke="#E3DDCF"/>
+        <line x1="232" y1="352" x2="1176" y2="352" stroke="#E3DDCF"/>
+        <line x1="232" y1="416" x2="1176" y2="416" stroke="#E3DDCF"/>
+        <line x1="232" y1="480" x2="1176" y2="480" stroke="#E3DDCF"/>
+        <text x="0"  y="96"  dy=".32em" fill="#8A8270" font-weight="600">Ops script</text>
+        <text x="0"  y="160" dy=".32em" fill="#2C497F" font-weight="600">You (operator)</text>
+        <text x="0"  y="224" dy=".32em" fill="#BF3B2A" font-weight="600">Impersonator</text>
+        <text x="0"  y="288" dy=".32em" fill="#6B4E8A" font-weight="600">Configuration</text>
+        <text x="0"  y="352" dy=".32em" fill="#23396A" font-weight="600">TinyURL svc</text>
+        <text x="0"  y="416" dy=".32em" fill="#4A443A" font-weight="600">Smart TV</text>
+        <text x="0"  y="480" dy=".32em" fill="#1E1A14" font-weight="600">remote-surface</text>
+      </g>
+      <g font-family="JetBrainsMono Nerd Font, JetBrains Mono, monospace" font-size="11" fill="#CDC5B2" text-anchor="middle" font-weight="600">
+        <text x="295" y="44">01</text><text x="413" y="44">02</text><text x="531" y="44">03</text>
+        <text x="649" y="44">04</text><text x="767" y="44">05</text><text x="885" y="44">06</text>
+        <text x="1003" y="44">07</text><text x="1121" y="44">08</text>
+        <text x="1176" y="44" text-anchor="end" fill="#8A8270">TIME →</text>
+      </g>
+      <polyline points="295,96 413,160 531,224 649,288 767,352 885,416 1003,480 1121,480"
+        fill="none" stroke="#8A8270" stroke-width="2" stroke-opacity=".5" stroke-dasharray="2 5" stroke-linecap="round"/>
+      <g stroke="#CDC5B2" stroke-width="1.5">
+        <line x1="531" y1="160" x2="531" y2="224"/><line x1="649" y1="224" x2="649" y2="288"/>
+        <line x1="767" y1="160" x2="767" y2="352"/><line x1="885" y1="352" x2="885" y2="416"/>
+      </g>
+      <g opacity=".4">
+        <rect x="524" y="153" width="14" height="14" rx="2" fill="#2C497F"/>
+        <rect x="642" y="217" width="14" height="14" rx="2" fill="#BF3B2A"/>
+        <rect x="760" y="153" width="14" height="14" rx="2" fill="#2C497F"/>
+        <rect x="878" y="345" width="14" height="14" rx="2" fill="#23396A"/>
+      </g>
+      <g font-family="JetBrainsMono Nerd Font, JetBrains Mono, monospace" font-size="11" font-weight="600" fill="#FDFCF9" text-anchor="middle">
+        <a href="#step-1"><rect class="node" x="283" y="84"   width="24" height="24" rx="2" fill="#8A8270"/><text x="295"  y="96"  dy=".34em">1</text></a>
+        <a href="#step-2"><rect class="node" x="401" y="148"  width="24" height="24" rx="2" fill="#2C497F"/><text x="413"  y="160" dy=".34em">2</text></a>
+        <a href="#step-3"><rect class="node" x="519" y="212"  width="24" height="24" rx="2" fill="#BF3B2A"/><text x="531"  y="224" dy=".34em">3</text></a>
+        <a href="#step-4"><rect class="node" x="637" y="276"  width="24" height="24" rx="2" fill="#6B4E8A"/><text x="649"  y="288" dy=".34em">4</text></a>
+        <a href="#step-5"><rect class="node" x="755" y="340"  width="24" height="24" rx="2" fill="#23396A"/><text x="767"  y="352" dy=".34em">5</text></a>
+        <a href="#step-6"><rect class="node" x="873" y="404"  width="24" height="24" rx="2" fill="#4A443A"/><text x="885"  y="416" dy=".34em">6</text></a>
+        <a href="#step-7"><rect class="node" x="991" y="468"  width="24" height="24" rx="2" fill="#1E1A14"/><text x="1003" y="480" dy=".34em">7</text></a>
+        <a href="#step-8"><rect class="node" x="1109" y="468" width="24" height="24" rx="2" fill="#1E1A14"/><text x="1121" y="480" dy=".34em">8</text></a>
+      </g>
+    </svg>
+    <figcaption class="caption">Eight steps, seven actors. The dashed path is the token's
+      journey; ties mark a two-party handoff. Click a node to jump to its detail.</figcaption>
+  </figure>
+
+  <div class="row"><div class="rail"></div><div class="main"><h2>The flow — eight steps</h2></div></div>
+
+  <!-- STEP 1 -->
+  <div class="step row" id="step-1">
+    <div class="rail">
+      <span class="num">01</span>
+      <div class="pills"><span class="pill script">Ops script</span></div>
+      <p class="action">One-time per demo. Creates/updates a DynamoDB <code>AppClient</code> row.</p>
+    </div>
+    <div class="main body">
+      <div class="step-title"><h3>Mint a long-TTL AppClient</h3><input type="checkbox" class="done-box" data-done="step-1" aria-label="Mark this step done" title="Mark this step done — strikes the title; saved in your browser"></div>
+      <p>Tokens minted later inherit <code>record.expirySec</code> from this row. The default for new
+        AppClients is 3&nbsp;hours — <mark>far too short for a demo</mark>. This script bumps it,
+        preserving <code>clientId</code>/<code>clientSecret</code> if the row exists.</p>
+      <div class="foot">
+        <button class="toggle" title="Show or hide the source file for this step (setDemoAppClientTTL.ts)">View code <span class="hint">setDemoAppClientTTL.ts</span></button>
+        <div class="note-row"><label>Notes / questions</label>
+          <div class="note-field"><textarea rows="1" data-note="step-1" placeholder="write a note…" title="Jot a note or question for this step. Saved in your browser automatically; collect them all with “Copy all notes”."></textarea></div></div>
+      </div>
+      <div class="code-panel">
+        <div class="filepath">src/cloud/manual-scripts/dynamoDB/src/AppClients/setDemoAppClientTTL.ts</div>
+        <pre><span class="k">const</span> existing = <span class="k">await</span> <span class="f">getAppClientByIdentifiers</span>(identifiers, logger);
+<span class="k">if</span> (existing) {
+  <span class="k">await</span> docClient.<span class="f">updateItem</span>(logger, {
+    TableName: config.tableName,
+    Key: { id: existing.id },
+    UpdateExpression: <span class="s">"SET expirySec = :expirySec"</span>,
+    ExpressionAttributeValues: { <span class="s">":expirySec"</span>: expirySec },
+  });
+  <span class="k">return</span>;
+}
+<span class="k">await</span> <span class="f">createAppClientRecord</span>({ identifiers, expirySec }, <span class="k">false</span>, logger);</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step row" id="step-2">
+    <div class="rail"><span class="num">02</span>
+      <div class="pills"><span class="pill you">You</span></div>
+      <p class="action">Open the impersonator, authenticate with jumpcloud.</p>
+    </div>
+    <div class="main body">
+      <div class="step-title"><h3>Sign in to the impersonator</h3><input type="checkbox" class="done-box" data-done="step-2" aria-label="Mark this step done" title="Mark this step done — strikes the title; saved in your browser"></div>
+      <p>Open <code>https://impersonator.dev-api.mce-sys.com</code>. The app needs a real session
+        because <code>TOKEN_OF_IDENTIFIERS</code> calls <code>validateIfUserCanGetBackendAuth</code>,
+        which checks your <code>impersonateRegex</code> against the requested identifiers. You stay on
+        the impersonator origin throughout — no redirect yet.</p>
+      <div class="foot">
+        <div class="note-row"><label>Notes / questions</label>
+          <div class="note-field"><textarea rows="1" data-note="step-2" placeholder="write a note…" title="Jot a note or question for this step. Saved in your browser automatically; collect them all with “Copy all notes”."></textarea></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step row" id="step-3">
+    <div class="rail"><span class="num">03</span>
+      <div class="pills"><span class="pill you">You</span><span class="pill imp">Impersonator</span></div>
+      <p class="action">Set <strong>Account</strong>, pick the Remote Surface target.</p>
+    </div>
+    <div class="main body">
+      <div class="step-title"><h3>Fill the form, pick the target</h3><input type="checkbox" class="done-box" data-done="step-3" aria-label="Mark this step done" title="Mark this step done — strikes the title; saved in your browser"></div>
+      <p>The two new dropdown entries are this PR's addition to <code>TARGET_MAP</code>; they resolve via
+        <code>getWebAppShortUrl(WebApps.RemoteSurface, apiEnv)</code> to the short domain the deploy lives on.</p>
+      <div class="foot">
+        <button class="toggle" title="Show or hide the source file for this step (api.ts)">View code <span class="hint">api.ts</span></button>
+        <div class="note-row"><label>Notes / questions</label>
+          <div class="note-field"><textarea rows="1" data-note="step-3" placeholder="write a note…" title="Jot a note or question for this step. Saved in your browser automatically; collect them all with “Copy all notes”."></textarea></div></div>
+      </div>
+      <div class="code-panel">
+        <div class="filepath">src/apps/cloud/impersonator/lib/api.ts</div>
+        <pre><span class="k">export const</span> TARGET_MAP = {
+  <span class="c">/* …existing… */</span>
+  <span class="s">"Tiny URL"</span>: <span class="f">getWebAppShortUrl</span>(WebApps.TinyUrl, apiEnv),
+  <span class="s">"Remote Surface (Display)"</span>: <span class="s">`${getWebAppShortUrl(WebApps.RemoteSurface, apiEnv)}/display`</span>,
+  <span class="s">"Remote Surface (Remote)"</span>:  <span class="s">`${getWebAppShortUrl(WebApps.RemoteSurface, apiEnv)}/remote`</span>,
+};</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step row" id="step-4">
+    <div class="rail"><span class="num">04</span>
+      <div class="pills"><span class="pill imp">Impersonator</span><span class="pill cfg">Config svc</span></div>
+      <p class="action">Backend reads <code>expirySec</code>, signs the JWT, returns it.</p>
+    </div>
+    <div class="main body">
+      <div class="step-title"><h3>Mint the JWT</h3><input type="checkbox" class="done-box" data-done="step-4" aria-label="Mark this step done" title="Mark this step done — strikes the title; saved in your browser"></div>
+      <p>Result is the long URL <code>&lt;target&gt;?auth_token=&lt;jwt&gt;</code>. The impersonator prepares to redirect.</p>
+      <div class="foot">
+        <button class="toggle" title="Show or hide the source file for this step (api.ts:14)">View code <span class="hint">api.ts:14</span></button>
+        <div class="note-row"><label>Notes / questions</label>
+          <div class="note-field"><textarea rows="1" data-note="step-4" placeholder="write a note…" title="Jot a note or question for this step. Saved in your browser automatically; collect them all with “Copy all notes”."></textarea></div></div>
+      </div>
+      <div class="code-panel">
+        <div class="filepath">src/apps/cloud/impersonator/lib/api.ts:14</div>
+        <pre><span class="k">const</span> url = <span class="k">new</span> <span class="f">URL</span>(<span class="f">getConfigurationServiceUrl</span>(apiEnv, ConfigurationRoute.TOKEN_OF_IDENTIFIERS));
+url.searchParams.<span class="f">append</span>(<span class="s">"for"</span>, identifiers);
+<span class="k">const</span> results = <span class="k">await</span> <span class="f">fetch</span>(url, {
+  method: <span class="s">"GET"</span>, headers: { authorization: <span class="s">`bearer ${token}`</span> },
+}).<span class="f">then</span>(r =&gt; r.<span class="f">json</span>());
+<span class="k">if</span> (results.data) <span class="k">return</span> results.data.access_token;</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step row" id="step-5">
+    <div class="rail"><span class="num">05</span>
+      <div class="pills"><span class="pill you">You</span><span class="pill tiny">TinyURL</span></div>
+      <p class="action">Optional. Shorten the ~2&nbsp;kB URL so it's typeable on a TV remote.</p>
+    </div>
+    <div class="main body">
+      <div class="step-title"><h3>Shorten via TinyURL</h3><input type="checkbox" class="done-box" data-done="step-5" aria-label="Mark this step done" title="Mark this step done — strikes the title; saved in your browser"></div>
+      <p>Run it through <code>tinyUrl.encodeUrl({ longUrl, expiryInSecs })</code> or the impersonator's
+        "Tiny URL" target. How it works:</p>
+      <ul class="tight">
+        <li><strong>Encode</strong> — MD5-hashes the URL (first 8 hex), stores <code>{keyUrl,url,expiry}</code> in DDB, returns a <code>/tinyurl/decode?keyUrl=…</code> link.</li>
+        <li><strong>Decode</strong> — unauthenticated GET, returns <code>302</code> to the original; query &amp; fragment pass through.</li>
+        <li><strong>TTL</strong> — capped by <code>tinyUrl.maxTTLSeconds</code>; DDB auto-deletes on expiry. Re-encoding is idempotent.</li>
+      </ul>
+      <div class="foot">
+        <button class="toggle" title="Show or hide the source file for this step (encode.ts:64)">View code <span class="hint">encode.ts:64</span></button>
+        <div class="note-row"><label>Notes / questions</label>
+          <div class="note-field"><textarea rows="1" data-note="step-5" placeholder="write a note…" title="Jot a note or question for this step. Saved in your browser automatically; collect them all with “Copy all notes”."></textarea></div></div>
+      </div>
+      <div class="code-panel">
+        <div class="filepath">src/cloud/API/v5/src/TinyURL/src/encode/encode.ts:64</div>
+        <pre><span class="k">const</span> hash = <span class="f">createHash</span>(<span class="s">"md5"</span>).<span class="f">update</span>(longUrl).<span class="f">digest</span>(<span class="s">"hex"</span>).<span class="f">slice</span>(<span class="n">0</span>, config.hashLength);
+<span class="k">await</span> client.<span class="f">putItem</span>(context.logger, {
+  TableName: tableName,
+  Item: { keyUrl: hash, url: longUrl, expiry: nowSec + effectiveExpirySeconds },
+});
+<span class="k">const</span> shortUrl = <span class="s">`${tinyUrlDecodeBaseUrl}?keyUrl=${hash}`</span>;</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="step row" id="step-6">
+    <div class="rail"><span class="num">06</span>
+      <div class="pills"><span class="pill tv">Smart TV</span><span class="pill tiny">TinyURL</span></div>
+      <p class="action">Customer types the short URL; TinyURL <code>302</code>s to the long one.</p>
+    </div>
+    <div class="main body">
+      <div class="step-title"><h3>The TV follows the redirect</h3><input type="checkbox" class="done-box" data-done="step-6" aria-label="Mark this step done" title="Mark this step done — strikes the title; saved in your browser"></div>
+      <p>The decode endpoint reads <code>keyUrl</code>, returns <code>302 Location: &lt;long-url&gt;</code>, the TV
+        follows it transparently. <mark>This is where the JWT actually reaches the device</mark> — until now
+        it lived only on your laptop and in the TinyURL row.</p>
+      <div class="foot">
+        <div class="note-row"><label>Notes / questions</label>
+          <div class="note-field"><textarea rows="1" data-note="step-6" placeholder="write a note…" title="Jot a note or question for this step. Saved in your browser automatically; collect them all with “Copy all notes”."></textarea></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="step row" id="step-7">
+    <div class="rail"><span class="num">07</span>
+      <div class="pills"><span class="pill app">remote-surface</span></div>
+      <p class="action"><code>EnvironmentInitializer.start()</code> consumes <code>?auth_token</code> before app code runs.</p>
+    </div>
+    <div class="main body">
+      <div class="step-title"><h3>EnvironmentInitializer consumes the token</h3><input type="checkbox" class="done-box" data-done="step-7" aria-label="Mark this step done" title="Mark this step done — strikes the title; saved in your browser"></div>
+      <p>It hands the token to the platform shell via <code>sendTokenToFramework</code>, schedules session
+        expiry, and strips the param. From here <code>getAuthToken()</code> returns that JWT — <em>as if SSO
+        had completed</em>.</p>
+      <div class="foot">
+        <button class="toggle" title="Show or hide the source file for this step (environment-initializer.ts:419)">View code <span class="hint">environment-initializer.ts:419</span></button>
+        <div class="note-row"><label>Notes / questions</label>
+          <div class="note-field"><textarea rows="1" data-note="step-7" placeholder="write a note…" title="Jot a note or question for this step. Saved in your browser automatically; collect them all with “Copy all notes”."></textarea></div></div>
+      </div>
+      <div class="code-panel">
+        <div class="filepath">…/web-framework-client-initializer/lib/environment-initializer.ts:419</div>
+        <pre>} <span class="k">else if</span> (<span class="f">hasParam</span>(ExternalParamsKeys.AuthToken)) {
+  <span class="k">const</span> authToken = <span class="f">getParam</span>(ExternalParamsKeys.AuthToken);
+  <span class="k">if</span> (authToken) {
+    <span class="k">await</span> jarvis.api.auth.<span class="f">clearSession</span>().<span class="f">promise</span>();
+    <span class="k">await</span> <span class="k">this</span>.<span class="f">sendTokenToFramework</span>(authToken);
+    <span class="k">await</span> <span class="k">this</span>.<span class="f">middlewareScheduleSessionExpiry</span>();
+  }
+}</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 8 -->
+  <div class="step row" id="step-8">
+    <div class="rail"><span class="num">08</span>
+      <div class="pills"><span class="pill app">remote-surface</span></div>
+      <p class="action"><code>RelayClient</code> connects with that JWT — display goes live.</p>
+    </div>
+    <div class="main body">
+      <div class="step-title"><h3>RelayClient connects — display is live</h3><input type="checkbox" class="done-box" data-done="step-8" aria-label="Mark this step done" title="Mark this step done — strikes the title; saved in your browser"></div>
+      <p><code>getRelayAuthToken()</code> pulls the token from the shell on every (re)connect; the Relay
+        verifies signature and identifiers and joins the peer to its group. Pair the remote side with a
+        second link targeting "Remote Surface (Remote)".</p>
+      <div class="foot">
+        <button class="toggle" title="Show or hide the source file for this step (auth.ts)">View code <span class="hint">auth.ts</span></button>
+        <div class="note-row"><label>Notes / questions</label>
+          <div class="note-field"><textarea rows="1" data-note="step-8" placeholder="write a note…" title="Jot a note or question for this step. Saved in your browser automatically; collect them all with “Copy all notes”."></textarea></div></div>
+      </div>
+      <div class="code-panel">
+        <div class="filepath">src/apps/cloud/remote-surface/src/services/transports/mce/auth.ts</div>
+        <pre><span class="k">export async function</span> <span class="f">getRelayAuthToken</span>(): Promise&lt;string&gt; {
+  <span class="k">if</span> (config.bypassAuth) <span class="k">return</span> config.demoRelayToken;
+  <span class="k">if</span> (!window.mce) <span class="k">throw new</span> <span class="f">Error</span>(<span class="s">"MCE platform shell not available"</span>);
+  <span class="k">const</span> { token } = <span class="k">await</span> window.mce.jarvis.api.auth.<span class="f">getAuthToken</span>().<span class="f">promise</span>();
+  <span class="k">return</span> token;
+}</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- URL ANATOMY -->
+  <div class="row"><div class="rail"></div><div class="main"><h2>URL anatomy</h2></div></div>
+  <div class="row"><div class="rail"></div><div class="main">
+    <div class="two-up">
+      <div class="panel">
+        <div class="ptitle">Without TinyURL — direct</div>
+        <div class="url"><span class="host">https://remote-surface.dev-api.mce-sys.com</span>/display<span class="qs">?auth_token=eyJraWQ…≈1.5–2 kB…</span></div>
+        <div class="count">≈ 2&nbsp;000 characters. Unusable on a TV remote.</div>
+      </div>
+      <div class="panel pick">
+        <div class="ptitle">With TinyURL — recommended</div>
+        <div class="url"><span class="host">https://api-v5.dev.mce-sys.com</span>/tinyurl/decode<span class="qs">?keyUrl=<span class="hash">a3f9b2c1</span></span></div>
+        <div class="count">≈ 60 characters. Typeable in under a minute.</div>
+      </div>
+    </div>
+    <div class="callout">
+      <span class="tag">Why not even shorter?</span>
+      <p>The resolver lives on the api-v5 domain, not a dedicated short host; a shorter alias domain
+        (CloudFront → same Lambda) is separate work. Not blocking the demo — flag if the client pushes back.</p>
+    </div>
+  </div></div>
+
+  <!-- TTL + failure modes -->
+  <div class="row"><div class="rail"></div><div class="main"><h2>TTL math &amp; where it breaks</h2></div></div>
+  <div class="row"><div class="rail"></div><div class="main">
+    <div class="two-up">
+      <div class="panel">
+        <div class="ptitle">TTL math</div>
+        <ul class="tight">
+          <li><strong>JWT TTL</strong> — the AppClient's <code>expirySec</code>, capped at <strong>10 days</strong>.</li>
+          <li><strong>TinyURL TTL</strong> — independent; if shorter than the JWT, the short URL 404s first.</li>
+          <li><strong>Effective lifetime</strong> = <code>min(JWT, TinyURL)</code> from issue.</li>
+          <li><strong>Refresh</strong> — rerun the script; minted tokens keep their stamped TTL.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Where it goes wrong</div>
+        <ul class="tight">
+          <li><strong>403 from <code>TOKEN_OF_IDENTIFIERS</code></strong> — user lacks <code>impersonateRegex</code>.</li>
+          <li><strong>Relay rejects the JWT</strong> — identifiers don't match the room.</li>
+          <li><strong>Short URL 404s</strong> — TTL elapsed, or env-A hash resolved in env B.</li>
+          <li><strong>TV can't reach the domain</strong> — <code>RestrictAccessToMce</code> WAF must be off.</li>
+        </ul>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- CHEAT SHEET -->
+  <div class="row"><div class="rail"></div><div class="main"><h2>Cheat-sheet</h2></div></div>
+  <div class="row"><div class="rail"></div><div class="main">
+    <pre class="block"><span class="c"># 1. Mint the long-TTL AppClient (one-time, per demo identifiers)</span>
+cd src/cloud/manual-scripts/dynamoDB
+npm run setDemoAppClientTTL-dev -- identifiers=account$mce-demo$remote-surface expirySec=<span class="n">604800</span>
+
+<span class="c"># 2. Deploy remote-surface infra (one-time per env)</span>
+cd src/apps/cloud/remote-surface &amp;&amp; npm run deploy-dev
+
+<span class="c"># 3. Jenkins Build Web → configuration=RemoteSurface, OVERWRITE_LATEST=true</span>
+<span class="c"># 4. Open impersonator, fill the form, copy the redirect URL.</span>
+<span class="c"># 5. (Optional) shorten via the "Tiny URL" target.</span>
+<span class="c"># 6. Hand the short URL to the TV.</span></pre>
+  </div></div>
+
+  <!-- FOOTER — small report tools -->
+  <footer class="tools full">
+    <p class="kicker">Tools</p>
+    <div class="tool" id="card-bg-tool">
+      <span class="tlabel">Block background</span>
+      <div class="swatches" role="group" aria-label="Preset block backgrounds">
+        <button class="swatch" data-color="#FFFEFC" style="background:#FFFEFC" title="Paper white"></button>
+        <button class="swatch" data-color="#FBF6EC" style="background:#FBF6EC" title="Warm"></button>
+        <button class="swatch" data-color="#F4ECDC" style="background:#F4ECDC" title="Sand (default)"></button>
+        <button class="swatch" data-color="#EEF1F7" style="background:#EEF1F7" title="Cool blue"></button>
+        <button class="swatch" data-color="#F7EDEA" style="background:#F7EDEA" title="Blush"></button>
+        <button class="swatch" data-color="#F1ECF5" style="background:#F1ECF5" title="Violet"></button>
+      </div>
+      <span class="custom">
+        <input type="color" id="card-bg-pick" value="#F4ECDC" title="Pick any custom background color">
+        <span class="val" id="card-bg-val">#F4ECDC</span>
+      </span>
+      <button class="reset" id="card-bg-reset" title="Restore the default warm fill">reset</button>
+    </div>
+    <div class="tool" id="card-border-tool">
+      <span class="tlabel">Block border</span>
+      <span class="custom">
+        <input type="color" id="card-border-pick" value="#211D17" title="Pick the border ink color">
+      </span>
+      <input type="range" id="card-border-alpha" min="0" max="100" step="1" value="5" title="Border opacity">
+      <span class="val" id="card-border-val">#211D17 · 5%</span>
+      <button class="reset" id="card-border-reset" title="Restore the default 5% ink hairline">reset</button>
+    </div>
+    <div class="tool" id="palette-tool">
+      <span class="tlabel">Palette</span>
+      <div class="seg" role="group" aria-label="Color palette">
+        <button class="seg-opt" data-palette="daylight" title="Warm paper, constructivist inks">Daylight</button>
+        <button class="seg-opt" data-palette="dusk" title="Cool slate paper, blueprint inks">Dusk</button>
+        <button class="seg-opt" data-palette="vivid" title="Your palette — light paper, electric-blue ink">Vivid</button>
+      </div>
+    </div>
+    <div class="tool" id="palette-edit-tool">
+      <span class="tlabel">Palette edit</span>
+      <span class="pe"><input type="color" data-pe="paper" title="Paper / page background (derives sheet + dot)"><span>Paper</span></span>
+      <span class="pe"><input type="color" data-pe="ink" title="Ink / text (derives the muted ink ramp)"><span>Ink</span></span>
+      <span class="pe"><input type="color" data-pe="red" title="Red accent (derives its ink + soft fill)"><span>Red</span></span>
+      <span class="pe"><input type="color" data-pe="blue" title="Blue accent (derives its ink + soft fill)"><span>Blue</span></span>
+      <span class="pe"><input type="color" data-pe="ochre" title="Ochre accent (derives its ink + soft fill)"><span>Ochre</span></span>
+      <span class="pe"><input type="color" data-pe="green" title="Green accent (derives its ink + soft fill)"><span>Green</span></span>
+      <button class="reset" id="palette-edit-reset" title="Drop all token overrides; return to the active palette">reset</button>
+    </div>
+    <div class="tool" id="serif-tool">
+      <span class="tlabel">Display serif</span>
+      <div class="seg" role="group" aria-label="Display serif font">
+        <button class="seg-opt" data-serif='"Fraunces",Georgia,serif' title="Fraunces — variable opsz + ital, soft-modern (current default)">Fraunces</button>
+        <button class="seg-opt" data-serif='"Playfair Display",Georgia,serif' title="Playfair Display — high-contrast Didone, 400–900 + italics">Playfair</button>
+        <button class="seg-opt" data-serif='"Newsreader",Georgia,serif' title="Newsreader — editorial, opsz + ital, 200–800">Newsreader</button>
+        <button class="seg-opt" data-serif='"Bodoni Moda",Georgia,serif' title="Bodoni Moda — elegant Didone, opsz + ital, 400–900">Bodoni</button>
+        <button class="seg-opt" data-serif='"Literata",Georgia,serif' title="Literata — sturdy book serif, opsz + ital, 200–900">Literata</button>
+      </div>
+      <button class="reset" id="serif-compare-open" title="See every candidate side by side on the same specimen">compare ▦</button>
+    </div>
+    <div class="tool" id="notes-layout-tool">
+      <span class="tlabel">Notes</span>
+      <div class="seg" role="group" aria-label="Notes layout">
+        <button class="seg-opt" data-notes="inline" title="Notes label shares the View-code baseline; the line sits in the text flow">Inline</button>
+        <button class="seg-opt" data-notes="column" title="Notes become a full-height column on the right; the line pins to the bottom">Column</button>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</div>
+
+<!-- serif comparison overlay (specimens injected by JS from #serif-tool) -->
+<div id="serif-compare" class="serif-compare" hidden role="dialog" aria-modal="true" aria-label="Compare display serifs">
+  <div class="sc-card">
+    <div class="sc-head">
+      <h4>Display serif — side by side</h4>
+      <span class="sub">click a specimen to apply it</span>
+      <button class="sc-close" type="button">close ✕</button>
+    </div>
+    <div class="specs"></div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = "pre-auth-link-explainer-notes";
+  document.querySelectorAll(".toggle").forEach(btn => btn.addEventListener("click", () => {
+    const main = btn.closest(".main");
+    const panel = main.querySelector(".code-panel");
+    const note = main.querySelector(".note-row");
+    const foot = btn.closest(".foot");
+    const open = panel.classList.toggle("open");
+    btn.classList.toggle("open", open);
+    main.classList.toggle("code-open", open);
+    // move the note below the code when open, back beside the toggle when closed
+    if (note) (open ? main : foot).appendChild(note);
+    btn.firstChild.textContent = open ? "Hide code " : "View code ";
+    regrowNotes();
+  }));
+  // a copy button on every code block (fly-out panels + standalone)
+  document.querySelectorAll(".code-panel, pre.block").forEach(box => {
+    const pre = box.matches("pre") ? box : box.querySelector("pre");
+    if (!pre) return;
+    const b = document.createElement("button"); b.className = "copy-btn"; b.textContent = "Copy";
+    b.title = "Copy this code block to the clipboard";
+    b.addEventListener("click", () => navigator.clipboard.writeText(pre.innerText).then(() => {
+      b.textContent = "Copied"; b.classList.add("done");
+      setTimeout(() => { b.textContent = "Copy"; b.classList.remove("done"); }, 1600);
+    }));
+    box.appendChild(b);
+  });
+  function readStore(){ try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; } }
+  const stored = readStore();
+  document.querySelectorAll("textarea[data-note]").forEach(t => {
+    const key = t.getAttribute("data-note");
+    const grow = () => { t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; };
+    if (stored[key]) t.value = stored[key];
+    grow();
+    t.addEventListener("input", () => { grow(); const c = readStore(); c[key] = t.value; localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); });
+  });
+  // expose a regrow-all for the layout switch (width changes → height must recompute)
+  function regrowNotes(){ document.querySelectorAll("textarea[data-note]").forEach(t => { t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }); }
+  // per-step "done" checkboxes — strike the title through, persist in the same store
+  document.querySelectorAll(".done-box[data-done]").forEach(box => {
+    const key = box.getAttribute("data-done");
+    const step = box.closest(".step");
+    const done = (stored.done && typeof stored.done === "object") ? stored.done : {};
+    box.checked = !!done[key];
+    if (step) step.classList.toggle("done", box.checked);
+    box.addEventListener("change", () => {
+      const c = readStore(); const d = (c.done && typeof c.done === "object") ? c.done : {};
+      d[key] = box.checked; c.done = d; localStorage.setItem(STORAGE_KEY, JSON.stringify(c));
+      if (step) step.classList.toggle("done", box.checked);
+    });
+  });
+  document.getElementById("copy-notes").addEventListener("click", () => {
+    const notes = [];
+    document.querySelectorAll(".step").forEach(s => {
+      const num = s.querySelector(".num").textContent.trim();
+      const title = s.querySelector("h3").textContent.trim();
+      const v = s.querySelector("textarea[data-note]").value.trim();
+      if (v) notes.push("Step " + num + " — " + title + "\n" + v);
+    });
+    const blob = notes.length ? notes.join("\n\n---\n\n") : "(no notes yet)";
+    navigator.clipboard.writeText(blob).then(() => {
+      const st = document.getElementById("copy-status");
+      st.textContent = notes.length ? "Copied " + notes.length + " note(s)." : "No notes yet.";
+      setTimeout(() => st.textContent = "", 3000);
+    });
+  });
+
+  // block-background chooser (footer tool)
+  (function(){
+    const DEFAULT = "#F4ECDC", BG_KEY = "report-card-bg";
+    const pick = document.getElementById("card-bg-pick");
+    const val = document.getElementById("card-bg-val");
+    const swatches = [...document.querySelectorAll("#card-bg-tool .swatch")];
+    function norm(c){ return (c||"").trim().toUpperCase(); }
+    function apply(color, save){
+      const c = norm(color);
+      document.documentElement.style.setProperty("--card-bg", c);
+      pick.value = c; val.textContent = c;
+      swatches.forEach(s => s.setAttribute("aria-pressed", norm(s.dataset.color) === c));
+      if (save) { const st = readStore(); st[BG_KEY] = c; localStorage.setItem(STORAGE_KEY, JSON.stringify(st)); }
+    }
+    swatches.forEach(s => s.addEventListener("click", () => apply(s.dataset.color, true)));
+    pick.addEventListener("input", () => apply(pick.value, true));
+    document.getElementById("card-bg-reset").addEventListener("click", () => apply(DEFAULT, true));
+    apply(readStore()[BG_KEY] || DEFAULT, false);
+  })();
+
+  // block-border chooser — color + opacity (footer tool)
+  (function(){
+    const DEF_HEX = "#211D17", DEF_A = 5, BORDER_KEY = "report-card-border";
+    const pick = document.getElementById("card-border-pick");
+    const alpha = document.getElementById("card-border-alpha");
+    const val = document.getElementById("card-border-val");
+    function hexToRgb(h){ const n = parseInt(h.slice(1), 16); return [n>>16&255, n>>8&255, n&255]; }
+    function apply(hex, a, save){
+      const [r,g,b] = hexToRgb(hex);
+      document.documentElement.style.setProperty("--card-border", `rgba(${r},${g},${b},${(a/100).toFixed(2)})`);
+      pick.value = hex; alpha.value = a;
+      val.textContent = `${hex.toUpperCase()} · ${a}%`;
+      if (save) { const st = readStore(); st[BORDER_KEY] = {hex, a}; localStorage.setItem(STORAGE_KEY, JSON.stringify(st)); }
+    }
+    pick.addEventListener("input", () => apply(pick.value, +alpha.value, true));
+    alpha.addEventListener("input", () => apply(pick.value, +alpha.value, true));
+    document.getElementById("card-border-reset").addEventListener("click", () => apply(DEF_HEX, DEF_A, true));
+    const saved = readStore()[BORDER_KEY] || {};
+    apply(saved.hex || DEF_HEX, saved.a != null ? saved.a : DEF_A, false);
+  })();
+
+  // palette switch (footer tool) — "daylight" is the :root default; "dusk" is the data-attr theme
+  (function(){
+    const DEFAULT = "dusk", PAL_KEY = "report-palette";
+    const opts = [...document.querySelectorAll("#palette-tool .seg-opt")];
+    function apply(name, save){
+      if (name === "daylight") document.documentElement.removeAttribute("data-palette");
+      else document.documentElement.setAttribute("data-palette", name);
+      opts.forEach(o => o.setAttribute("aria-pressed", o.dataset.palette === name));
+      if (save) { const st = readStore(); st[PAL_KEY] = name; localStorage.setItem(STORAGE_KEY, JSON.stringify(st)); }
+    }
+    opts.forEach(o => o.addEventListener("click", () => apply(o.dataset.palette, true)));
+    apply(readStore()[PAL_KEY] || DEFAULT, false);
+  })();
+
+  // palette editor (footer tool) — live token prototyping. Pickers override the
+  // active palette via inline custom-props on <html>; accents derive ink + soft.
+  (function(){
+    const EDIT_KEY = "report-palette-edit";
+    const inputs = [...document.querySelectorAll("#palette-edit-tool input[data-pe]")];
+    const root = document.documentElement;
+    const clamp = (n,a,b) => Math.max(a, Math.min(b, n));
+    function hexToHsl(H){
+      H = H.replace("#",""); if (H.length === 3) H = H.split("").map(c=>c+c).join("");
+      const r = parseInt(H.substr(0,2),16)/255, g = parseInt(H.substr(2,2),16)/255, b = parseInt(H.substr(4,2),16)/255;
+      const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max-min;
+      let h = 0, s = 0; const l = (max+min)/2;
+      if (d){ s = d/(1-Math.abs(2*l-1));
+        switch(max){ case r: h = ((g-b)/d)%6; break; case g: h = (b-r)/d+2; break; default: h = (r-g)/d+4; }
+        h *= 60; if (h<0) h += 360; }
+      return [h,s,l];
+    }
+    function hslToHex(h,s,l){
+      const c = (1-Math.abs(2*l-1))*s, x = c*(1-Math.abs((h/60)%2-1)), m = l-c/2;
+      let r,g,b;
+      if (h<60){r=c;g=x;b=0;} else if (h<120){r=x;g=c;b=0;} else if (h<180){r=0;g=c;b=x;}
+      else if (h<240){r=0;g=x;b=c;} else if (h<300){r=x;g=0;b=c;} else {r=c;g=0;b=x;}
+      const hx = v => ("0"+Math.round((v+m)*255).toString(16)).slice(-2);
+      return "#"+hx(r)+hx(g)+hx(b);
+    }
+    function toHex6(v){
+      v = (v||"").trim();
+      if (v[0] === "#"){ let s = v.slice(1); if (s.length===3) s = s.split("").map(c=>c+c).join(""); return "#"+s.toLowerCase(); }
+      const m = v.match(/\d+/g);
+      return m ? "#"+m.slice(0,3).map(n=>("0"+(+n).toString(16)).slice(-2)).join("") : "#000000";
+    }
+    const setV = (n,v) => root.style.setProperty(n,v);
+    function applyGroup(key, hex){
+      const [h,s,l] = hexToHsl(hex);
+      if (key === "paper"){
+        setV("--paper", hex);
+        setV("--sheet", hslToHex(h, s, clamp(l+0.04,0,1)));
+        setV("--dot",   hslToHex(h, s, clamp(l-0.06,0,1)));
+      } else if (key === "ink"){
+        setV("--ink", hex); setV("--ink-strong", hex);
+        setV("--ink-2", hslToHex(h, s, clamp(l+0.18,0,1)));
+        setV("--ink-3", hslToHex(h, clamp(s*0.7,0,1), clamp(l+0.42,0,1)));
+      } else {
+        setV("--"+key,         hex);
+        setV("--"+key+"-ink",  hslToHex(h, clamp(s*1.05,0,1), clamp(l*0.6,0,1)));
+        setV("--"+key+"-soft", hslToHex(h, clamp(s*0.55,0,0.6), 0.90));
+      }
+    }
+    const seedName = key => key === "ink" ? "--ink" : key === "paper" ? "--paper" : "--"+key;
+    const seed = key => toHex6(getComputedStyle(root).getPropertyValue(seedName(key)) || "#000000");
+    function persist(map){ const st = readStore(); st[EDIT_KEY] = map; localStorage.setItem(STORAGE_KEY, JSON.stringify(st)); }
+    const OVERRIDDEN = ["--paper","--sheet","--dot","--ink","--ink-strong","--ink-2","--ink-3",
+      "--red","--red-ink","--red-soft","--blue","--blue-ink","--blue-soft",
+      "--ochre","--ochre-ink","--ochre-soft","--green","--green-ink","--green-soft"];
+    const saved = readStore()[EDIT_KEY] || {};
+    inputs.forEach(inp => {
+      const key = inp.dataset.pe;
+      if (saved[key]) applyGroup(key, saved[key]);     // re-apply persisted edits first
+      inp.value = saved[key] ? toHex6(saved[key]) : seed(key);
+      inp.addEventListener("input", () => {
+        applyGroup(key, inp.value);
+        const m = readStore()[EDIT_KEY] || {}; m[key] = inp.value; persist(m);
+      });
+    });
+    document.getElementById("palette-edit-reset").addEventListener("click", () => {
+      OVERRIDDEN.forEach(n => root.style.removeProperty(n));
+      const st = readStore(); delete st[EDIT_KEY]; localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
+      inputs.forEach(inp => inp.value = seed(inp.dataset.pe));   // reseed from the active palette
+    });
+  })();
+
+  // notes-layout switch (footer tool) — "inline" is the default; "column" is the data-attr mode
+  (function(){
+    const DEFAULT = "inline", NL_KEY = "report-notes-layout";
+    const opts = [...document.querySelectorAll("#notes-layout-tool .seg-opt")];
+    function apply(name, save){
+      if (name === "inline") document.documentElement.removeAttribute("data-notes");
+      else document.documentElement.setAttribute("data-notes", name);
+      opts.forEach(o => o.setAttribute("aria-pressed", o.dataset.notes === name));
+      regrowNotes();
+      if (save) { const st = readStore(); st[NL_KEY] = name; localStorage.setItem(STORAGE_KEY, JSON.stringify(st)); }
+    }
+    opts.forEach(o => o.addEventListener("click", () => apply(o.dataset.notes, true)));
+    apply(readStore()[NL_KEY] || DEFAULT, false);
+  })();
+  // display-serif switcher + side-by-side comparison overlay (overrides --serif-display)
+  (function(){
+    const DEFAULT = '"Literata",Georgia,serif', SF_KEY = "report-serif-display";
+    const opts = [...document.querySelectorAll("#serif-tool .seg-opt")];
+    const overlay = document.getElementById("serif-compare");
+    const grid = overlay && overlay.querySelector(".specs");
+    function apply(stack, save){
+      if (stack === DEFAULT) document.documentElement.style.removeProperty("--serif-display");
+      else document.documentElement.style.setProperty("--serif-display", stack);
+      opts.forEach(o => o.setAttribute("aria-pressed", o.dataset.serif === stack));
+      if (grid) grid.querySelectorAll(".spec").forEach(s => s.classList.toggle("active", s.dataset.serif === stack));
+      if (save) { const st = readStore(); st[SF_KEY] = stack; localStorage.setItem(STORAGE_KEY, JSON.stringify(st)); }
+    }
+    opts.forEach(o => o.addEventListener("click", () => apply(o.dataset.serif, true)));
+
+    // build one specimen per candidate, same content rendered in each face
+    if (grid) {
+      opts.forEach(o => {
+        const fig = document.createElement("button");
+        fig.type = "button"; fig.className = "spec"; fig.dataset.serif = o.dataset.serif;
+        fig.style.setProperty("--sf", o.dataset.serif);
+        fig.innerHTML =
+          '<span class="spec-name">' + o.textContent + '</span>' +
+          '<span class="spec-display">Pre-auth link for remote-surface</span>' +
+          '<span class="spec-ramp"><span style="font-weight:400">Mint</span>' +
+            '<span style="font-weight:600">Mint</span><span style="font-weight:700">Mint</span>' +
+            '<span style="font-weight:900">Mint</span></span>' +
+          '<span class="spec-ital">stageable, ships with the PR</span>';
+        fig.addEventListener("click", () => { apply(o.dataset.serif, true); close(); });
+        grid.appendChild(fig);
+      });
+    }
+    function open(){ if (overlay){ overlay.hidden = false; document.body.style.overflow = "hidden"; } }
+    function close(){ if (overlay){ overlay.hidden = true; document.body.style.overflow = ""; } }
+    const openBtn = document.getElementById("serif-compare-open");
+    if (openBtn) openBtn.addEventListener("click", open);
+    if (overlay) {
+      overlay.querySelector(".sc-close").addEventListener("click", close);
+      overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+    }
+    document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+
+    apply(readStore()[SF_KEY] || DEFAULT, false);
+  })();
+</script>
+</body>
+</html>

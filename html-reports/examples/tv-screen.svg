@@ -1,0 +1,51 @@
+<svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A smart TV on a stand displaying the remote-surface demo, already signed in, with the pre-auth URL shown along the top.">
+  <defs>
+    <style>
+      .mono{font-family:"JetBrainsMono Nerd Font","JetBrains Mono",monospace;}
+      .serif{font-family:Georgia,"Source Serif 4",serif;}
+    </style>
+  </defs>
+
+  <!-- ground shadow -->
+  <ellipse cx="500" cy="588" rx="250" ry="14" fill="#1E1A14" opacity="0.10"/>
+
+  <!-- stand -->
+  <rect x="455" y="520" width="90" height="56" rx="3" fill="#2A2620"/>
+  <rect x="380" y="572" width="240" height="12" rx="6" fill="#1E1A14"/>
+
+  <!-- TV bezel -->
+  <rect x="70" y="36" width="860" height="492" rx="14" fill="#16140F"/>
+  <rect x="84" y="50" width="832" height="464" rx="7" fill="#0E0D0A"/>
+
+  <!-- screen -->
+  <rect x="96" y="62" width="808" height="440" rx="4" fill="#F5F1E9"/>
+
+  <!-- top URL strip -->
+  <rect x="96" y="62" width="808" height="52" rx="4" fill="#23396A"/>
+  <rect x="96" y="100" width="808" height="14" fill="#23396A"/>
+  <circle cx="128" cy="88" r="6" fill="#F5F1E9" opacity="0.9"/>
+  <text x="152" y="93" class="mono" font-size="18" fill="#DFE4EE">tv.mce-sys.com/r/aXP9bZ</text>
+  <text x="864" y="93" class="mono" font-size="16" fill="#9DB0D6" text-anchor="end">live</text>
+  <circle cx="828" cy="88" r="4" fill="#3F7A57"/>
+
+  <!-- app content: signed-in remote surface -->
+  <text x="140" y="178" class="mono" font-size="15" fill="#BF3B2A" letter-spacing="2">REMOTE-SURFACE</text>
+  <text x="140" y="232" class="serif" font-size="44" font-weight="700" fill="#1E1A14">Welcome back,</text>
+  <text x="140" y="284" class="serif" font-size="44" font-weight="700" fill="#1E1A14">Northwind Demo.</text>
+
+  <!-- "no login screen" badge -->
+  <rect x="140" y="320" width="300" height="40" rx="20" fill="#DEEADD"/>
+  <circle cx="168" cy="340" r="8" fill="#3F7A57"/>
+  <text x="186" y="346" class="mono" font-size="15" fill="#2E5C41">signed in — no login screen</text>
+
+  <!-- content cards -->
+  <rect x="140" y="392" width="220" height="78" rx="5" fill="#F4ECDC" stroke="#1E1A14" stroke-opacity="0.20"/>
+  <rect x="380" y="392" width="220" height="78" rx="5" fill="#F4ECDC" stroke="#1E1A14" stroke-opacity="0.20"/>
+  <rect x="620" y="392" width="220" height="78" rx="5" fill="#F4ECDC" stroke="#1E1A14" stroke-opacity="0.20"/>
+  <rect x="160" y="412" width="120" height="10" rx="5" fill="#1E1A14" opacity="0.55"/>
+  <rect x="160" y="434" width="170" height="8" rx="4" fill="#1E1A14" opacity="0.25"/>
+  <rect x="400" y="412" width="120" height="10" rx="5" fill="#1E1A14" opacity="0.55"/>
+  <rect x="400" y="434" width="170" height="8" rx="4" fill="#1E1A14" opacity="0.25"/>
+  <rect x="640" y="412" width="120" height="10" rx="5" fill="#1E1A14" opacity="0.55"/>
+  <rect x="640" y="434" width="170" height="8" rx="4" fill="#1E1A14" opacity="0.25"/>
+</svg>

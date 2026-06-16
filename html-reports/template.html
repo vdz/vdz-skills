@@ -1,0 +1,477 @@
+<!doctype html>
+<!--
+  html-reports — canonical template & living design reference.
+
+  This file is the SOURCE OF TRUTH for the look. To start a report: copy this
+  file, keep the <head> (tokens + base components) verbatim, then replace the
+  <body> blocks with your content. See design-system.md for the *why* behind
+  every token, and patterns.md for which blocks to assemble per report type.
+
+  Principles embodied here:
+    · One typographic MEASURE (column width) + one RHYTHM (vertical unit).
+      All spacing is a multiplication or fraction of --rhythm. Nothing arbitrary.
+    · Signal vs noise IS the design tool. Chrome stays quiet; type carries the eye.
+    · Light, low-contrast, warm paper. A tribute to the printed report.
+    · The report is divided into logical BLOCKS. Each block may take a
+      differentiating "ground" (dot / rule / colour plane); the default is space.
+    · Bauhaus / Constructivist accents — flat, muted, used as signal, never decor.
+    · No emoji. Typography and rule-work do the work emoji would otherwise fake.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Report — html-reports template</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Spectral:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+<style>
+  :root {
+    /* ── Paper & ink (warm, low-chroma, low-contrast) ───────────────── */
+    --paper:    #F4F0E7;   /* warm off-white — not too yellow */
+    --paper-2:  #EEE9DD;   /* a slightly deeper plane for raised layers */
+    --dot:      #E2DBCC;   /* ghostly bullet-journal grain */
+    --rule:     #DCD5C6;   /* hairlines */
+    --rule-2:   #C7BFAD;   /* a stronger rule when a break must register */
+
+    --ink:   #211D17;      /* near-black, warm — headings, key text */
+    --ink-2: #454036;      /* body */
+    --ink-3: #7A7264;      /* meta, captions, the "noise" tier */
+
+    /* ── Bauhaus / Constructivist accents — flat, muted, signal-only ── */
+    --red:    #BF3B2A;  --red-ink:   #8C2719;  --red-soft:   #F1DED8;
+    --blue:   #2C497F;  --blue-ink:  #1E3461;  --blue-soft:  #DDE3EE;
+    --ochre:  #CC9A2E;  --ochre-ink: #6E5212;  --ochre-soft: #F1E6C9;
+    --black:  #211D17;  --black-soft:#E6E0D2;
+
+    --mark: rgba(204, 154, 46, 0.30);  /* sparing highlighter — the one phrase */
+
+    /* ── Measure & rhythm — the spatial spine ───────────────────────── */
+    --measure: 66ch;       /* Bringhurst: 45–75 char line; 66 is the anchor  */
+    --measure-wide: 84ch;  /* tables / matrices may breathe wider            */
+    --rhythm: 1.7rem;      /* the vertical unit; ALL spacing derives from it */
+
+    --s-xs:  calc(var(--rhythm) * 0.375);
+    --s-sm:  calc(var(--rhythm) * 0.5);
+    --s-md:  var(--rhythm);
+    --s-lg:  calc(var(--rhythm) * 1.5);
+    --s-xl:  calc(var(--rhythm) * 2);
+    --s-2xl: calc(var(--rhythm) * 3);
+
+    /* ── Type ───────────────────────────────────────────────────────── */
+    --serif-display: "Fraunces", Georgia, "Times New Roman", serif;
+    --serif-text:    "Spectral", Georgia, "Times New Roman", serif;
+    --mono:          "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { font-size: 16px; }
+
+  body {
+    margin: 0;
+    background-color: var(--paper);
+    color: var(--ink-2);
+    font-family: var(--serif-text);
+    font-size: 1.125rem;          /* 18px */
+    line-height: var(--rhythm);    /* baseline rhythm */
+    font-feature-settings: "onum" 1, "liga" 1, "kern" 1;  /* old-style figures in prose */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    hanging-punctuation: first last;
+  }
+
+  /* The page is one centred measure on warm paper. */
+  .sheet {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: var(--s-2xl) var(--s-lg) var(--s-2xl);
+  }
+  .sheet--wide { max-width: var(--measure-wide); }
+
+  /* ── Grounds: a block's optional "floor" ────────────────────────────
+     Default is white space. A block may instead sit on the bullet-journal
+     dot grid, on ruled paper, or on a flat Constructivist colour plane. */
+  .ground-dot {
+    background-image: radial-gradient(var(--dot) 0.8px, transparent 1.1px);
+    background-size: calc(var(--rhythm) / 2) calc(var(--rhythm) / 2);
+    background-position: center top;
+  }
+  .ground-rule {
+    background-image: repeating-linear-gradient(
+      to bottom, transparent 0, transparent calc(var(--rhythm) - 1px),
+      var(--rule) calc(var(--rhythm) - 1px), var(--rule) var(--rhythm));
+  }
+  .ground-plane { background-color: var(--paper-2); }
+  .ground-plane--red   { background-color: var(--red-soft); }
+  .ground-plane--blue  { background-color: var(--blue-soft); }
+  .ground-plane--ochre { background-color: var(--ochre-soft); }
+  .ground-plane--ink   { background-color: var(--black); color: var(--paper); }
+  /* Grounds that aren't plain get inset padding so the floor shows as a panel. */
+  [class*="ground-"]:not(.ground-dot):not(.ground-rule) {
+    padding: var(--s-md) var(--s-lg);
+    border-radius: 2px;
+  }
+
+  /* ── Document header ────────────────────────────────────────────── */
+  .doc-kicker {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--red-ink);
+    margin: 0 0 var(--s-sm);
+  }
+  h1.doc-title {
+    font-family: var(--serif-display);
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-size: 2.85rem;       /* ~46px display */
+    line-height: 1.04;
+    letter-spacing: -0.012em;
+    color: var(--ink);
+    margin: 0 0 var(--s-sm);
+    text-wrap: balance;
+  }
+  .doc-standfirst {
+    font-size: 1.27rem;       /* lead */
+    line-height: calc(var(--rhythm) * 1.18);
+    color: var(--ink-2);
+    font-weight: 400;
+    margin: 0 0 var(--s-md);
+    max-width: 54ch;
+  }
+  dl.doc-meta {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: calc(var(--rhythm) / 4) var(--s-md);
+    margin: var(--s-md) 0 0;
+    padding: var(--s-sm) 0 0;
+    border-top: 2px solid var(--ink);
+    align-items: baseline;
+  }
+  dl.doc-meta dt {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0;
+  }
+  dl.doc-meta dd {
+    margin: 0; color: var(--ink-2); font-size: 0.95rem;
+    font-family: var(--mono); font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+  dl.doc-meta a { color: var(--blue-ink); text-decoration: none; border-bottom: 1px solid var(--blue-soft); }
+  dl.doc-meta a:hover { border-bottom-color: var(--blue); }
+
+  /* ── Block ──────────────────────────────────────────────────────── */
+  section.block { margin: var(--s-2xl) 0 0; }
+  .block-num {
+    font-family: var(--mono);
+    font-size: 0.78rem; font-weight: 600; letter-spacing: 0.1em;
+    color: var(--red); display: block; margin: 0 0 calc(var(--rhythm) / 4);
+  }
+  h2.block-title {
+    font-family: var(--serif-display);
+    font-weight: 500; font-size: 1.78rem; line-height: 1.12;
+    letter-spacing: -0.008em; color: var(--ink);
+    margin: 0 0 var(--s-sm);
+    padding-bottom: var(--s-xs);
+    border-bottom: 1px solid var(--rule-2);
+  }
+  h3.sub-title {
+    font-family: var(--serif-text);
+    font-weight: 600; font-size: 1.18rem; line-height: 1.25;
+    color: var(--ink); margin: var(--s-md) 0 var(--s-xs);
+  }
+  p { margin: 0 0 var(--s-sm); max-width: var(--measure); }
+  p + p { margin-top: 0; }       /* space, not indent — chosen once, kept */
+  .lead { font-size: 1.18rem; color: var(--ink); }
+  .caption { font-style: italic; font-size: 0.92rem; color: var(--ink-3); margin-top: calc(var(--rhythm) / 4); }
+
+  /* ── Inline emphasis vocabulary (the signal layer) ──────────────── */
+  strong { color: var(--ink); font-weight: 600; }
+  em { font-style: italic; }
+  mark { background: var(--mark); color: inherit; padding: 0 0.15em; border-radius: 1px;
+         -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .sc { font-variant: all-small-caps; letter-spacing: 0.04em; }
+  code {
+    font-family: var(--mono); font-size: 0.86em;
+    background: var(--paper-2); border: 1px solid var(--rule);
+    padding: 0.05em 0.35em; border-radius: 2px; color: var(--ink);
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+
+  /* ── Verdict / recommendation — the lede of a decision report ───── */
+  .verdict {
+    display: grid; grid-template-columns: max-content 1fr; gap: var(--s-md);
+    align-items: start;
+    border-left: 3px solid var(--red);
+    background: var(--red-soft);
+    padding: var(--s-md) var(--s-lg);
+    border-radius: 2px; margin: var(--s-md) 0;
+  }
+  .verdict .label {
+    font-family: var(--mono); font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--red-ink);
+    line-height: var(--rhythm);
+  }
+  .verdict .call { font-family: var(--serif-display); font-weight: 500;
+    font-size: 1.34rem; line-height: 1.2; color: var(--ink); margin: 0 0 calc(var(--rhythm)/3); }
+  .verdict p:last-child { margin-bottom: 0; }
+
+  /* ── Callouts (note / watch) — flat, no emoji ───────────────────── */
+  .callout { border-left: 3px solid var(--rule-2); padding: var(--s-sm) var(--s-md);
+    margin: var(--s-md) 0; background: var(--paper-2); border-radius: 2px; }
+  .callout .tag { font-family: var(--mono); font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-3); display: block;
+    margin-bottom: calc(var(--rhythm)/4); }
+  .callout.note  { border-left-color: var(--blue);  } .callout.note  .tag { color: var(--blue-ink); }
+  .callout.watch { border-left-color: var(--ochre); } .callout.watch .tag { color: var(--ochre-ink); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ── Tables: comparison matrix, risk table ──────────────────────── */
+  table { border-collapse: collapse; width: 100%; margin: var(--s-md) 0;
+    font-size: 0.96rem; font-feature-settings: "tnum" 1, "lnum" 1; }
+  thead th { text-align: left; font-family: var(--mono); font-weight: 600;
+    font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
+    padding: 0 var(--s-sm) var(--s-xs); border-bottom: 2px solid var(--ink); vertical-align: bottom; }
+  tbody th { text-align: left; font-family: var(--serif-text); font-weight: 600; color: var(--ink);
+    padding: calc(var(--rhythm)/3) var(--s-sm); vertical-align: top; }
+  tbody td { padding: calc(var(--rhythm)/3) var(--s-sm); border-bottom: 1px solid var(--rule);
+    color: var(--ink-2); vertical-align: top; }
+  tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
+  td.pick { background: var(--ochre-soft); }
+  .chip { font-family: var(--mono); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em;
+    padding: 0.1em 0.5em; border-radius: 2px; border: 1px solid; white-space: nowrap; }
+  .chip.hi { color: var(--red-ink);   border-color: var(--red);   background: var(--red-soft); }
+  .chip.md { color: var(--ochre-ink); border-color: var(--ochre); background: var(--ochre-soft); }
+  .chip.lo { color: var(--ink-3);     border-color: var(--rule-2); background: var(--paper-2); }
+
+  /* ── Steps / process ────────────────────────────────────────────── */
+  ol.steps { list-style: none; counter-reset: step; margin: var(--s-md) 0; padding: 0; }
+  ol.steps > li { counter-increment: step; position: relative;
+    padding: 0 0 var(--s-md) var(--s-xl); }
+  ol.steps > li::before { content: counter(step, decimal-leading-zero);
+    position: absolute; left: 0; top: 0; font-family: var(--mono); font-weight: 600;
+    font-size: 0.82rem; color: var(--red); line-height: var(--rhythm); }
+  ol.steps > li::after { content: ""; position: absolute; left: 0.62em; top: var(--rhythm);
+    bottom: calc(var(--rhythm) / 3); width: 1px; background: var(--rule-2); }
+  ol.steps > li:last-child::after { display: none; }
+  ol.steps .step-h { font-weight: 600; color: var(--ink); }
+
+  /* ── Change surface / blast radius ──────────────────────────────── */
+  ul.surface { list-style: none; margin: var(--s-md) 0; padding: 0; }
+  ul.surface li { display: grid; grid-template-columns: 0.6rem 1fr max-content;
+    gap: var(--s-sm); align-items: baseline; padding: calc(var(--rhythm)/3) 0;
+    border-bottom: 1px solid var(--rule); }
+  ul.surface li:last-child { border-bottom: 0; }
+  ul.surface .risk { width: 0.6rem; height: 0.6rem; border-radius: 50%; align-self: center; }
+  ul.surface .risk.hi { background: var(--red); }
+  ul.surface .risk.md { background: var(--ochre); }
+  ul.surface .risk.lo { background: var(--rule-2); }
+  ul.surface .path { font-family: var(--mono); font-size: 0.9rem; color: var(--ink); }
+  ul.surface .why { color: var(--ink-3); font-size: 0.9rem; font-style: italic; }
+
+  /* ── Code on request: collapsible + pure-CSS tabs ───────────────── */
+  details.code { margin: var(--s-md) 0; border: 1px solid var(--rule-2); border-radius: 3px;
+    background: var(--paper-2); }
+  details.code > summary { cursor: pointer; list-style: none; padding: calc(var(--rhythm)/3) var(--s-md);
+    font-family: var(--mono); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--ink); display: flex; align-items: center; gap: var(--s-sm); }
+  details.code > summary::-webkit-details-marker { display: none; }
+  details.code > summary::before { content: "▸"; color: var(--red); transition: transform .15s; }
+  details.code[open] > summary::before { transform: rotate(90deg); }
+  details.code > summary .hint { color: var(--ink-3); font-weight: 400; margin-left: auto; }
+  .tabs { display: flex; flex-wrap: wrap; }
+  .tabs > input { position: absolute; opacity: 0; pointer-events: none; }
+  .tabs > label { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-3);
+    padding: calc(var(--rhythm)/3) var(--s-md); cursor: pointer; border-top: 1px solid var(--rule);
+    border-right: 1px solid var(--rule); }
+  .tabs > .panel { display: none; order: 99; width: 100%; border-top: 1px solid var(--rule-2); }
+  .tabs > input:checked + label { color: var(--ink); background: var(--paper); box-shadow: inset 0 -2px 0 var(--red); }
+  .tabs > input:checked + label + .panel { display: block; }
+  pre { margin: 0; padding: var(--s-md); overflow-x: auto; background: var(--paper);
+    font-family: var(--mono); font-size: 0.82rem; line-height: 1.55; color: var(--ink-2); }
+  pre .c { color: var(--ink-3); font-style: italic; }   /* comment */
+  pre .k { color: var(--blue-ink); }                     /* keyword */
+  pre .s { color: var(--red-ink); }                      /* string  */
+
+  /* ── In-page nav (jump-to) ──────────────────────────────────────── */
+  nav.toc { font-family: var(--mono); font-size: 0.8rem; margin: var(--s-md) 0 0;
+    display: flex; flex-wrap: wrap; gap: var(--s-sm) var(--s-md); }
+  nav.toc a { color: var(--ink-3); text-decoration: none; }
+  nav.toc a:hover { color: var(--red); }
+  nav.toc a::before { content: attr(data-n) "  "; color: var(--rule-2); }
+
+  html { scroll-behavior: smooth; }
+
+  @media (max-width: 540px) {
+    .verdict { grid-template-columns: 1fr; gap: var(--s-sm); }
+    .sheet { padding: var(--s-xl) var(--s-md) var(--s-xl); }
+    h1.doc-title { font-size: 2.2rem; }
+  }
+</style>
+</head>
+<body>
+<main class="sheet">
+
+  <!-- ════ DOCUMENT HEADER ════════════════════════════════════════ -->
+  <header>
+    <p class="doc-kicker">Decision report · Caching layer</p>
+    <h1 class="doc-title">Should we put Redis in front of the catalogue API?</h1>
+    <p class="doc-standfirst">A recommendation, the evidence behind it, and exactly
+      what shipping it would touch. Read the verdict; open the rest only if you
+      want to argue with it.</p>
+    <dl class="doc-meta">
+      <dt>Prepared</dt><dd>2026-06-15</dd>
+      <dt>Spec</dt><dd><a href="#">docs/specs/catalogue-cache.md</a></dd>
+      <dt>Decision&nbsp;by</dt><dd>2026-06-20</dd>
+    </dl>
+    <nav class="toc">
+      <a href="#verdict" data-n="01">Recommendation</a>
+      <a href="#options" data-n="02">Options</a>
+      <a href="#how"     data-n="03">How it works</a>
+      <a href="#surface" data-n="04">Change surface</a>
+      <a href="#risk"    data-n="05">Risks</a>
+    </nav>
+  </header>
+
+  <!-- ════ 01 · THE LEDE: recommendation first ════════════════════ -->
+  <section class="block" id="verdict">
+    <span class="block-num">01</span>
+    <h2 class="block-title">Recommendation</h2>
+    <div class="verdict">
+      <span class="label">Recommend</span>
+      <div>
+        <p class="call">Add a read-through Redis cache, scoped to product reads only.</p>
+        <p>It removes the <mark>p99 latency spike</mark> on the catalogue without
+          touching write paths, and it is reversible in an afternoon. The cost is a
+          new piece of infrastructure to operate — justified here, see <a href="#risk">risks</a>.</p>
+      </div>
+    </div>
+    <p>The catalogue API serves <strong>reads that rarely change</strong> but are
+      hit on every page load. We are paying database latency for data that is, in
+      effect, static between deploys. Three options were weighed; only one is worth
+      the operational cost.</p>
+  </section>
+
+  <!-- ════ 02 · COMPARISON MATRIX (on a colour plane) ═════════════ -->
+  <section class="block" id="options">
+    <span class="block-num">02</span>
+    <h2 class="block-title">Options weighed</h2>
+    <div class="ground-plane">
+      <table>
+        <thead>
+          <tr><th>Approach</th><th>Latency win</th><th>Effort</th><th>Operational cost</th><th>Reversible</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>Read-through Redis <span class="chip lo">pick</span></th>
+            <td class="pick">High — cache hit ≈ 2&nbsp;ms</td>
+            <td class="pick">2–3 days</td>
+            <td class="pick">One new service</td>
+            <td class="pick">Yes — feature-flagged</td>
+          </tr>
+          <tr>
+            <th>In-process LRU</th>
+            <td>Medium — per-pod only</td>
+            <td>1 day</td>
+            <td>None</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <th>Materialised view in Postgres</th>
+            <td>Medium</td>
+            <td>4–5 days</td>
+            <td>Refresh job to own</td>
+            <td>Hard — schema change</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="caption">The ochre row is the recommended pick. Effort is calendar
+        days for one engineer; latency is measured at p99.</p>
+    </div>
+  </section>
+
+  <!-- ════ 03 · PROCESS / HOW IT WORKS (on the dot ground) ════════ -->
+  <section class="block" id="how">
+    <span class="block-num">03</span>
+    <h2 class="block-title">How the read path changes</h2>
+    <div class="ground-dot" style="padding: var(--s-md) 0;">
+      <ol class="steps">
+        <li><span class="step-h">Request arrives</span> at the catalogue endpoint
+          and we compute a stable cache key from the product id and locale.</li>
+        <li><span class="step-h">Check Redis.</span> On a hit we return immediately —
+          this is the <mark>2&nbsp;ms path</mark> that flattens the p99 spike.</li>
+        <li><span class="step-h">On a miss,</span> read Postgres as today, then write
+          the result back to Redis with a short TTL before responding.</li>
+        <li><span class="step-h">On deploy,</span> a version prefix in the key
+          invalidates everything at once — no manual flush.</li>
+      </ol>
+    </div>
+    <details class="code">
+      <summary>Read-through, in full <span class="hint">~20 lines</span></summary>
+      <div class="tabs">
+        <input type="radio" name="t1" id="t1a" checked /><label for="t1a">handler.ts</label>
+        <input type="radio" name="t1" id="t1b" /><label for="t1b">key.ts</label>
+        <div class="panel"><pre><span class="k">async function</span> getProduct(id, locale) {
+  <span class="k">const</span> key = cacheKey(id, locale);
+  <span class="k">const</span> hit = <span class="k">await</span> redis.get(key);
+  <span class="k">if</span> (hit) <span class="k">return</span> JSON.parse(hit);   <span class="c">// 2ms path</span>
+
+  <span class="k">const</span> row = <span class="k">await</span> db.product(id, locale);
+  <span class="k">await</span> redis.set(key, JSON.stringify(row), <span class="s">'EX'</span>, 300);
+  <span class="k">return</span> row;
+}</pre></div>
+        <div class="panel"><pre><span class="k">const</span> VERSION = process.env.DEPLOY_SHA;
+<span class="k">export const</span> cacheKey = (id, locale) =&gt;
+  <span class="s">`cat:${VERSION}:${locale}:${id}`</span>;  <span class="c">// prefix invalidates on deploy</span></pre></div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ════ 04 · CHANGE SURFACE / BLAST RADIUS ═════════════════════ -->
+  <section class="block" id="surface">
+    <span class="block-num">04</span>
+    <h2 class="block-title">What this touches</h2>
+    <p>Four files, one new dependency, zero write-path changes. The risk dots are
+      the whole point of this block — read them first.</p>
+    <ul class="surface">
+      <li><span class="risk md"></span><span class="path">api/catalogue/handler.ts</span><span class="why">new read-through branch</span></li>
+      <li><span class="risk lo"></span><span class="path">api/catalogue/key.ts</span><span class="why">new file — key builder</span></li>
+      <li><span class="risk hi"></span><span class="path">infra/redis.tf</span><span class="why">new service — needs review</span></li>
+      <li><span class="risk lo"></span><span class="path">config/flags.ts</span><span class="why">cache_catalogue flag, default off</span></li>
+    </ul>
+    <div class="callout note">
+      <span class="tag">Note</span>
+      <p>Write paths are untouched, so correctness risk is bounded to “stale read for
+        up to 300&nbsp;s”, which the product team has already signed off.</p>
+    </div>
+  </section>
+
+  <!-- ════ 05 · RISK TABLE (ink plane to close, like a print colophon) ═ -->
+  <section class="block" id="risk">
+    <span class="block-num">05</span>
+    <h2 class="block-title">Risks &amp; mitigations</h2>
+    <table>
+      <thead><tr><th>Risk</th><th>Severity</th><th>Mitigation</th></tr></thead>
+      <tbody>
+        <tr><th>Redis outage</th><td><span class="chip md">Medium</span></td><td>Fail open to Postgres on any cache error.</td></tr>
+        <tr><th>Stale data after write</th><td><span class="chip lo">Low</span></td><td>300&nbsp;s TTL; product reads tolerate it.</td></tr>
+        <tr><th>One more thing to operate</th><td><span class="chip hi">High</span></td><td>Managed Redis; alert on hit-rate &lt; 80%.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout watch">
+      <span class="tag">Watch</span>
+      <p>If hit-rate sits below 80% after a week, the cache is not earning its
+        operational cost — revisit the in-process LRU option instead.</p>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

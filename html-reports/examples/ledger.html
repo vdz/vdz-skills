@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<!--
+  html-reports — "Ledger" style template.
+  Layout: a single warm 920px column of decision-ticket cards on off-white paper —
+  serif headings, mono labels, rust-terracotta accents; the only dark surface is the
+  "verbatim ask" slide. A sticky toolbar drives a localStorage-backed per-item note
+  layer (toggle, debounced autosave, two-click clear-all, copy-to-Markdown, toast).
+  To reuse: copy this file, keep the <head> (the entire <style> and <script>) VERBATIM,
+  and replace only the placeholder content below — title, masthead, TOC, the verbatim
+  ask, the decision tickets, and the footer. Keep every data-note-id / data-note-title
+  unique so the note JS keeps working.
+  Design rationale: ../styles/ledger.md. System fonts only — no webfonts.
+-->
+<html lang="en" data-theme="report">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Report Title — Spec-Decision Report</title>
+<style>
+	:root {
+		/* Tempered, warm editorial palette — no pure black on pure white. */
+		--paper: #f6f2ea;
+		--paper-raised: #fbf8f2;
+		--ink: #2f2c27;
+		--ink-2: #5a554c;
+		--ink-3: #8d877b;
+		--hair: #e2dccf;
+		--hair-strong: #cfc7b6;
+		--accent: #a8472b;
+		--accent-strong: #8a3a22;
+		--accent-soft: #f2e4dc;
+		--good: #4f7a4a;
+		--good-soft: #e7efe3;
+		--block: #9a6b1f;
+		--block-soft: #f3e9d2;
+		--slide: #2b2924;
+		--slide-ink: #f3ece0;
+		--slide-ink-2: #c4bba9;
+		--slide-accent: #e0a07f;
+
+		--font-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+		--font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+		--font-mono: "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, monospace;
+
+		--maxw: 920px;
+		--r: 14px;
+		--r-sm: 9px;
+	}
+
+	* { box-sizing: border-box; }
+
+	html { scroll-behavior: smooth; }
+
+	body {
+		margin: 0;
+		background: var(--paper);
+		color: var(--ink);
+		font-family: var(--font-sans);
+		/* Larger base text + generous leading. */
+		font-size: 18px;
+		line-height: 1.72;
+		-webkit-font-smoothing: antialiased;
+		text-rendering: optimizeLegibility;
+	}
+
+	/* ── Sticky toolbar ── */
+	.toolbar {
+		position: sticky;
+		top: 0;
+		z-index: 50;
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		padding: 12px clamp(18px, 5vw, 48px);
+		background: color-mix(in srgb, var(--paper) 88%, transparent);
+		backdrop-filter: saturate(1.1) blur(8px);
+		border-bottom: 1px solid var(--hair);
+	}
+	.toolbar .brand {
+		font-family: var(--font-mono);
+		font-size: 12.5px;
+		letter-spacing: 0.04em;
+		color: var(--ink-3);
+		text-transform: uppercase;
+		margin-right: auto;
+	}
+	.toolbar .brand b { color: var(--accent-strong); font-weight: 600; }
+	.tbtn {
+		font-family: var(--font-sans);
+		font-size: 14.5px;
+		font-weight: 500;
+		color: var(--ink);
+		background: var(--paper-raised);
+		border: 1px solid var(--hair-strong);
+		border-radius: var(--r-sm);
+		padding: 7px 14px;
+		cursor: pointer;
+		transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+	}
+	.tbtn:hover { border-color: var(--accent); color: var(--accent-strong); }
+	.tbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+	.tbtn.is-armed { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+	.note-count {
+		font-family: var(--font-mono);
+		font-size: 12.5px;
+		color: var(--ink-3);
+		min-width: 7.5em;
+		text-align: right;
+	}
+	.note-count b { color: var(--accent-strong); }
+
+	/* ── Layout shell ── */
+	main {
+		max-width: var(--maxw);
+		margin: 0 auto;
+		padding: 0 clamp(18px, 5vw, 48px) 120px;
+	}
+
+	header.masthead {
+		padding: 64px 0 36px;
+		border-bottom: 2px solid var(--ink);
+		margin-bottom: 8px;
+	}
+	header.masthead .kicker {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--accent-strong);
+		margin: 0 0 14px;
+	}
+	header.masthead h1 {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		font-size: clamp(34px, 6vw, 52px);
+		line-height: 1.08;
+		letter-spacing: -0.015em;
+		margin: 0 0 18px;
+	}
+	header.masthead .standfirst {
+		font-size: 20px;
+		line-height: 1.6;
+		color: var(--ink-2);
+		max-width: 42em;
+		margin: 0 0 24px;
+	}
+	.meta-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px 22px;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--ink-3);
+	}
+	.meta-row a { color: var(--accent-strong); text-decoration: none; border-bottom: 1px solid var(--accent-soft); }
+	.meta-row a:hover { border-bottom-color: var(--accent); }
+	.meta-row .tally b { color: var(--ink); font-weight: 600; }
+
+	/* ── Table of contents ── */
+	nav.toc {
+		margin: 40px 0;
+		padding: 22px 26px;
+		background: var(--paper-raised);
+		border: 1px solid var(--hair);
+		border-radius: var(--r);
+	}
+	nav.toc h2 {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		margin: 0 0 14px;
+	}
+	nav.toc ol {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+		gap: 6px 28px;
+	}
+	nav.toc li { display: flex; gap: 10px; align-items: baseline; }
+	nav.toc .tn {
+		font-family: var(--font-mono);
+		font-size: 12.5px;
+		font-weight: 600;
+		color: var(--accent-strong);
+		min-width: 2.4em;
+	}
+	nav.toc a { color: var(--ink); text-decoration: none; line-height: 1.45; }
+	nav.toc a:hover { color: var(--accent-strong); }
+
+	/* ── Section + ticket cards ── */
+	section { margin: 56px 0 0; scroll-margin-top: 80px; }
+	.section-head {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		border-bottom: 1px solid var(--hair);
+		padding-bottom: 8px;
+		margin: 0 0 26px;
+	}
+
+	h2.block-title {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		font-size: 28px;
+		line-height: 1.2;
+		letter-spacing: -0.01em;
+		margin: 0 0 18px;
+	}
+
+	.ticket {
+		background: var(--paper-raised);
+		border: 1px solid var(--hair);
+		border-radius: var(--r);
+		padding: 30px clamp(20px, 4vw, 34px);
+		margin: 26px 0;
+	}
+	.ticket-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 6px;
+	}
+	.badge {
+		font-family: var(--font-mono);
+		font-weight: 600;
+		font-size: 13px;
+		color: #fff;
+		background: var(--accent);
+		border-radius: 7px;
+		padding: 3px 9px;
+		letter-spacing: 0.02em;
+	}
+	.jira {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--ink-3);
+		text-decoration: none;
+		border-bottom: 1px solid transparent;
+	}
+	.jira:hover { color: var(--accent-strong); border-bottom-color: var(--accent-soft); }
+	.pill {
+		margin-left: auto;
+		font-family: var(--font-mono);
+		font-size: 11.5px;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		padding: 3px 11px;
+		border-radius: var(--r-pill, 999px);
+	}
+	.pill.shipped { color: var(--good); background: var(--good-soft); }
+	.pill.blocked { color: var(--block); background: var(--block-soft); }
+
+	.ticket h3 {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		font-size: 23px;
+		line-height: 1.25;
+		letter-spacing: -0.01em;
+		margin: 6px 0 18px;
+	}
+
+	.ask {
+		margin: 0 0 22px;
+		padding: 14px 18px;
+		background: var(--paper);
+		border-left: 3px solid var(--hair-strong);
+		border-radius: 0 var(--r-sm) var(--r-sm) 0;
+	}
+	.ask .ask-label {
+		display: block;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		margin-bottom: 6px;
+	}
+	.ask q {
+		font-family: var(--font-serif);
+		font-style: italic;
+		font-size: 17px;
+		color: var(--ink-2);
+		quotes: "“" "”";
+		line-height: 1.55;
+	}
+	.ask q + q { display: block; margin-top: 6px; }
+
+	.crux-label {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--accent-strong);
+		margin: 4px 0 12px;
+	}
+	.decisions { margin: 0; padding: 0; list-style: none; }
+	.decisions > li {
+		position: relative;
+		padding: 0 0 16px 26px;
+		margin: 0;
+	}
+	.decisions > li::before {
+		content: "";
+		position: absolute;
+		left: 4px;
+		top: 11px;
+		width: 8px;
+		height: 8px;
+		border-radius: 2px;
+		background: var(--accent);
+		transform: rotate(45deg);
+	}
+	.decisions > li:last-child { padding-bottom: 0; }
+	.decisions .d-lead { font-weight: 600; color: var(--ink); }
+	.decisions code {
+		font-family: var(--font-mono);
+		font-size: 0.86em;
+		background: var(--accent-soft);
+		color: var(--accent-strong);
+		padding: 1px 5px;
+		border-radius: 5px;
+	}
+
+	/* ── Per-ticket screenshot ── */
+	.shot { margin: 2px 0 22px; }
+	.shot img {
+		display: block;
+		width: 100%;
+		height: auto;
+		border: 1px solid var(--hair-strong);
+		border-radius: var(--r-sm);
+		background: #fff;
+		box-shadow: 0 1px 2px rgba(47, 44, 39, 0.05), 0 10px 28px rgba(47, 44, 39, 0.08);
+	}
+	.shot figcaption {
+		margin-top: 10px;
+		font-family: var(--font-mono);
+		font-size: 11.5px;
+		line-height: 1.5;
+		letter-spacing: 0.02em;
+		color: var(--ink-3);
+		display: flex;
+		gap: 9px;
+	}
+	.shot figcaption::before {
+		content: "";
+		flex: none;
+		width: 8px;
+		height: 8px;
+		margin-top: 4px;
+		border-radius: 2px;
+		background: var(--accent);
+		transform: rotate(45deg);
+	}
+	.shot--empty .shot-frame {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding: 20px 22px;
+		border: 1px dashed var(--hair-strong);
+		border-radius: var(--r-sm);
+		background: var(--paper);
+	}
+	.shot--empty .shot-glyph { flex: none; color: var(--hair-strong); }
+	.shot--empty .shot-glyph svg { display: block; }
+	.shot--empty .shot-text { font-family: var(--font-sans); font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+	.shot--empty .shot-text b {
+		display: block;
+		margin-bottom: 3px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+	}
+
+	/* ── Raw-client-ask slide frame ── */
+	.slide-wrap { margin: 40px 0 8px; }
+	.slide {
+		position: relative;
+		background: var(--slide);
+		color: var(--slide-ink);
+		border-radius: 18px;
+		padding: clamp(26px, 5vw, 52px);
+		box-shadow: 0 24px 60px -28px rgba(43, 41, 36, 0.7), 0 2px 0 rgba(255,255,255,0.04) inset;
+		overflow: hidden;
+	}
+	.slide::after {
+		content: "VERBATIM ASK";
+		position: absolute;
+		top: 20px;
+		right: 26px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.22em;
+		color: var(--slide-ink-2);
+		opacity: 0.8;
+	}
+	.slide .slide-kicker {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--slide-accent);
+		margin: 0 0 6px;
+	}
+	.slide h2 {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		font-size: clamp(24px, 4vw, 34px);
+		line-height: 1.14;
+		letter-spacing: -0.01em;
+		margin: 0 0 4px;
+		color: var(--slide-ink);
+	}
+	.slide .slide-sub {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--slide-ink-2);
+		margin: 0 0 26px;
+	}
+	.slide .preamble {
+		font-style: italic;
+		color: var(--slide-ink-2);
+		border-left: 2px solid var(--slide-accent);
+		padding-left: 16px;
+		margin: 0 0 26px;
+		max-width: 46em;
+	}
+	.slide .ask-group { margin: 0 0 22px; }
+	.slide .ask-group:last-child { margin-bottom: 0; }
+	.slide .ask-group > .grp {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--slide-accent);
+		margin: 0 0 10px;
+		border-bottom: 1px solid rgba(224, 160, 127, 0.25);
+		padding-bottom: 6px;
+	}
+	.slide ul {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.slide ul li {
+		position: relative;
+		padding: 5px 0 5px 22px;
+		font-family: var(--font-mono);
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--slide-ink);
+	}
+	.slide ul li::before {
+		content: "—";
+		position: absolute;
+		left: 0;
+		color: var(--slide-ink-2);
+	}
+
+	/* ── Annotation infra ── */
+	.note {
+		margin-top: 22px;
+		border-top: 1px dashed var(--hair-strong);
+		padding-top: 14px;
+	}
+	.note-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		font-family: var(--font-sans);
+		font-size: 13.5px;
+		font-weight: 500;
+		color: var(--ink-3);
+		background: none;
+		border: 0;
+		padding: 2px 0;
+		cursor: pointer;
+	}
+	.note-toggle:hover { color: var(--accent-strong); }
+	.note-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+	.note-toggle .dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--hair-strong);
+		flex: none;
+	}
+	.note.has-content .note-toggle { color: var(--accent-strong); }
+	.note.has-content .note-toggle .dot { background: var(--accent); }
+	.note-body { margin-top: 12px; }
+	.note-body[hidden] { display: none; }
+	.note textarea {
+		width: 100%;
+		min-height: 84px;
+		resize: vertical;
+		font-family: var(--font-sans);
+		font-size: 15.5px;
+		line-height: 1.6;
+		color: var(--ink);
+		background: var(--paper);
+		border: 1px solid var(--hair-strong);
+		border-radius: var(--r-sm);
+		padding: 12px 14px;
+	}
+	.note textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+	.note .saved-hint {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--ink-3);
+		margin-top: 6px;
+		height: 1.2em;
+		opacity: 0;
+		transition: opacity 160ms ease;
+	}
+	.note .saved-hint.show { opacity: 1; }
+
+	/* Section-level notes get a faint accent ground to distinguish from per-item. */
+	.note.section-note {
+		background: var(--accent-soft);
+		border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+		border-radius: var(--r);
+		border-top: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+		padding: 16px 20px;
+		margin-top: 28px;
+	}
+	.note.section-note .note-toggle { color: var(--accent-strong); }
+
+	footer {
+		margin-top: 72px;
+		padding-top: 24px;
+		border-top: 1px solid var(--hair);
+		font-family: var(--font-mono);
+		font-size: 12.5px;
+		color: var(--ink-3);
+		line-height: 1.7;
+	}
+
+	/* Toast for copy confirmation */
+	.toast {
+		position: fixed;
+		bottom: 28px;
+		left: 50%;
+		transform: translateX(-50%) translateY(20px);
+		background: var(--slide);
+		color: var(--slide-ink);
+		font-family: var(--font-sans);
+		font-size: 14.5px;
+		padding: 12px 22px;
+		border-radius: 10px;
+		box-shadow: 0 16px 40px -18px rgba(43,41,36,0.7);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 200ms ease, transform 200ms ease;
+		z-index: 60;
+	}
+	.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+	@media (max-width: 600px) {
+		body { font-size: 17px; }
+		.toolbar { flex-wrap: wrap; }
+		.toolbar .brand { width: 100%; margin-bottom: 4px; }
+	}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+	<span class="brand">PROJECT <b>vX.Y</b> · Spec-Decision Report</span>
+	<span class="note-count" id="noteCount"><b>0</b> notes</span>
+	<button class="tbtn" id="copyAll" type="button">Copy all notes</button>
+	<button class="tbtn" id="clearAll" type="button">Clear all</button>
+</div>
+
+<main>
+	<header class="masthead">
+		<p class="kicker">TICKET-0000 · Cycle Name</p>
+		<h1>Report Title — Project Spec-Decision Report</h1>
+		<p class="standfirst">
+			One-line standfirst goes here: describe what this report covers — one epic, one
+			brief, N tickets — and that it explains the <em>crux</em> of each meaningful spec
+			decision, not just what changed but <em>why</em>.
+		</p>
+		<div class="meta-row">
+			<span class="tally"><b>2</b> shipped · <b>1</b> blocked</span>
+			<a href="#" rel="noopener">Epic EPIC-000 ↗</a>
+			<span>Branch <code style="font-family:var(--font-mono)">feature/your-branch-name</code></span>
+		</div>
+	</header>
+
+	<!-- ── Table of contents ── -->
+	<nav class="toc" aria-label="Contents">
+		<h2>Tickets</h2>
+		<ol>
+			<li><span class="tn">T1</span><a href="#t1">First ticket title</a></li>
+			<li><span class="tn">T2</span><a href="#t2">Second ticket title</a></li>
+			<li><span class="tn">T3</span><a href="#t3">Third ticket title</a></li>
+		</ol>
+	</nav>
+
+	<!-- ── Raw client ask slide ── -->
+	<div class="slide-wrap">
+		<div class="slide">
+			<p class="slide-kicker">The brief, as received</p>
+			<h2>Project Improvement Cycle</h2>
+			<p class="slide-sub">Fixes, Improvements, New Features</p>
+			<p class="preamble">
+				The client asked that … &lt;placeholder one-line framing of the brief&gt;.
+				Replace this with a neutral paraphrase of any preamble or scoping note.
+			</p>
+
+			<div class="ask-group">
+				<p class="grp">UI</p>
+				<ul>
+					<li>The client asked that … &lt;placeholder UI request one&gt;.</li>
+					<li>The client asked that … &lt;placeholder UI request two&gt;.</li>
+					<li>The client asked that … &lt;placeholder UI request three&gt;.</li>
+				</ul>
+			</div>
+
+			<div class="ask-group">
+				<p class="grp">Features</p>
+				<ul>
+					<li>The client asked that … &lt;placeholder feature request one&gt;.</li>
+					<li>The client asked that … &lt;placeholder feature request two&gt;.</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+
+	<div class="note section-note" data-note-id="raw-ask" data-note-title="Raw client ask">
+		<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Note on the brief</button>
+		<div class="note-body" hidden>
+			<textarea placeholder="Comment on the brief itself — scope, ambiguities, what you'd reword…"></textarea>
+			<div class="saved-hint">saved</div>
+		</div>
+	</div>
+
+	<!-- ── Cross-cutting decisions ── -->
+	<section id="cross">
+		<p class="section-head">Reading the brief — cross-cutting decisions</p>
+		<h2 class="block-title">Choices that shaped every ticket</h2>
+		<div class="ticket">
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">First cross-cutting principle.</span> Placeholder
+					rationale describing a decision that applies across all tickets — what was
+					chosen and why, with an inline <code>token-or-symbol</code> chip for flavour.
+				</li>
+				<li>
+					<span class="d-lead">Second cross-cutting principle.</span> Placeholder
+					rationale. Reference a constraint or convention here, e.g.
+					<code>--accent</code>, and explain the trade-off it forced.
+				</li>
+				<li>
+					<span class="d-lead">Third cross-cutting principle.</span> Placeholder
+					rationale describing something deliberately <em>not</em> done, and why that
+					omission was the right call.
+				</li>
+			</ul>
+			<div class="note" data-note-id="cross" data-note-title="Cross-cutting decisions">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Your comment on the cross-cutting decisions…"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ── Per-ticket sections ── -->
+	<section id="tickets">
+		<p class="section-head">Ticket by ticket — the crux</p>
+
+		<!-- T1 — example with an "empty shot" placeholder (no UI surface) -->
+		<article class="ticket" id="t1">
+			<div class="ticket-head">
+				<span class="badge">T1</span>
+				<a class="jira" href="#" rel="noopener">TICKET-0001 ↗</a>
+				<span class="pill shipped">Shipped</span>
+			</div>
+			<h3>First ticket title — <code>relevantSymbol</code> placeholder</h3>
+			<figure class="shot shot--empty">
+				<div class="shot-frame">
+					<span class="shot-glyph"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h0M10 10h0M14 10h0M18 10h0M6 14h0M18 14h0"/><path d="M9 14h6"/></svg></span>
+					<span class="shot-text"><b>No UI surface</b>Placeholder note for a ticket with no screen of its own — e.g. pure infrastructure. Swap this whole &lt;figure&gt; for a <code>.shot</code> with an &lt;img&gt; when there is a screenshot.</span>
+				</div>
+			</figure>
+			<div class="ask">
+				<span class="ask-label">From the brief</span>
+				<q>The client asked that … &lt;placeholder verbatim line one&gt;.</q>
+				<q>The client asked that … &lt;placeholder verbatim line two&gt;.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">First decision lead.</span> Placeholder rationale for the
+					first decision on this ticket, with an inline <code>code</code> chip.
+				</li>
+				<li>
+					<span class="d-lead">Second decision lead.</span> Placeholder rationale
+					explaining the trade-off taken and what it ruled out.
+				</li>
+				<li>
+					<span class="d-lead">Third decision lead.</span> Placeholder rationale closing
+					out the crux of this ticket.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t1" data-note-title="T1 — First ticket title">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Your comment on T1…"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</article>
+
+		<!-- T2 — example with a blocked status pill -->
+		<article class="ticket" id="t2">
+			<div class="ticket-head">
+				<span class="badge">T2</span>
+				<a class="jira" href="#" rel="noopener">TICKET-0002 ↗</a>
+				<span class="pill blocked">Blocked</span>
+			</div>
+			<h3>Second ticket title</h3>
+			<div class="ask">
+				<span class="ask-label">From the brief</span>
+				<q>The client asked that … &lt;placeholder verbatim line&gt;.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Why it is blocked.</span> Placeholder rationale — e.g. the
+					feature needs a backend that is not yet built, so the FE stops at a decision
+					spike with a single <code>// TODO: TICKET-0000</code> swap point.
+				</li>
+				<li>
+					<span class="d-lead">What was decided anyway.</span> Placeholder rationale for
+					the part of the work that could land despite the block.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t2" data-note-title="T2 — Second ticket title">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Your comment on T2…"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</article>
+
+		<!-- T3 -->
+		<article class="ticket" id="t3">
+			<div class="ticket-head">
+				<span class="badge">T3</span>
+				<a class="jira" href="#" rel="noopener">TICKET-0003 ↗</a>
+				<span class="pill shipped">Shipped</span>
+			</div>
+			<h3>Third ticket title</h3>
+			<div class="ask">
+				<span class="ask-label">From the brief</span>
+				<q>The client asked that … &lt;placeholder verbatim line&gt;.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">First decision lead.</span> Placeholder rationale with an
+					inline <code>code</code> chip showing the concrete choice.
+				</li>
+				<li>
+					<span class="d-lead">Second decision lead.</span> Placeholder rationale closing
+					out this ticket.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t3" data-note-title="T3 — Third ticket title">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Your comment on T3…"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</article>
+	</section>
+
+	<footer>
+		<p>
+			PROJECT vX.Y · Epic EPIC-000 · N tickets (TICKET-0001 – TICKET-000N) ·
+			summary recap of what shipped, what was spiked, and what stayed blocked.
+		</p>
+		<p>
+			Notes are saved in this browser only (localStorage). Use <strong>Copy all notes</strong>
+			to lift them out as text. Generated as a local artifact — not committed.
+		</p>
+	</footer>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+	"use strict";
+	var STORE_PREFIX = "html-report:";
+	var notes = Array.prototype.slice.call(document.querySelectorAll(".note"));
+
+	function keyFor(id) { return STORE_PREFIX + id; }
+
+	function showToast(message) {
+		var el = document.getElementById("toast");
+		el.textContent = message;
+		el.classList.add("show");
+		window.clearTimeout(showToast._t);
+		showToast._t = window.setTimeout(function () { el.classList.remove("show"); }, 2200);
+	}
+
+	function refreshCount() {
+		var filled = notes.filter(function (n) {
+			var ta = n.querySelector("textarea");
+			return ta && ta.value.trim().length > 0;
+		}).length;
+		var counter = document.getElementById("noteCount");
+		counter.innerHTML = "<b>" + filled + "</b> note" + (filled === 1 ? "" : "s");
+	}
+
+	function wireNote(note) {
+		var id = note.getAttribute("data-note-id");
+		var toggle = note.querySelector(".note-toggle");
+		var body = note.querySelector(".note-body");
+		var textarea = note.querySelector("textarea");
+		var hint = note.querySelector(".saved-hint");
+		if (!id || !toggle || !body || !textarea) return;
+
+		// Restore saved value.
+		var saved = "";
+		try { saved = window.localStorage.getItem(keyFor(id)) || ""; } catch (e) { saved = ""; }
+		textarea.value = saved;
+		var hasContent = saved.trim().length > 0;
+		note.classList.toggle("has-content", hasContent);
+		// Auto-open if a note already exists.
+		if (hasContent) {
+			body.hidden = false;
+			toggle.setAttribute("aria-expanded", "true");
+		}
+
+		toggle.addEventListener("click", function () {
+			var open = body.hidden;
+			body.hidden = !open;
+			toggle.setAttribute("aria-expanded", open ? "true" : "false");
+			if (open) { textarea.focus(); }
+		});
+
+		var saveTimer = null;
+		textarea.addEventListener("input", function () {
+			var val = textarea.value;
+			note.classList.toggle("has-content", val.trim().length > 0);
+			refreshCount();
+			window.clearTimeout(saveTimer);
+			saveTimer = window.setTimeout(function () {
+				try {
+					if (val.trim().length > 0) {
+						window.localStorage.setItem(keyFor(id), val);
+					} else {
+						window.localStorage.removeItem(keyFor(id));
+					}
+					if (hint) {
+						hint.classList.add("show");
+						window.setTimeout(function () { hint.classList.remove("show"); }, 1100);
+					}
+				} catch (e) { /* storage unavailable — notes stay in-memory only */ }
+			}, 350);
+		});
+	}
+
+	notes.forEach(wireNote);
+	refreshCount();
+
+	// ── Copy all notes ──
+	document.getElementById("copyAll").addEventListener("click", function () {
+		var lines = ["# Report Notes", ""];
+		var any = false;
+		notes.forEach(function (n) {
+			var ta = n.querySelector("textarea");
+			if (!ta || ta.value.trim().length === 0) return;
+			any = true;
+			var title = n.getAttribute("data-note-title") || n.getAttribute("data-note-id") || "Note";
+			lines.push("## " + title);
+			lines.push(ta.value.trim());
+			lines.push("");
+		});
+		if (!any) { showToast("No notes yet — nothing to copy."); return; }
+		var text = lines.join("\n");
+
+		function fallbackCopy() {
+			var tmp = document.createElement("textarea");
+			tmp.value = text;
+			tmp.style.position = "fixed";
+			tmp.style.opacity = "0";
+			document.body.appendChild(tmp);
+			tmp.select();
+			try { document.execCommand("copy"); } catch (e) { /* ignore */ }
+			document.body.removeChild(tmp);
+		}
+
+		var count = lines.filter(function (l) { return l.indexOf("## ") === 0; }).length;
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(text).then(
+				function () { showToast("Copied " + count + " note" + (count === 1 ? "" : "s") + " to clipboard."); },
+				function () { fallbackCopy(); showToast("Copied " + count + " note" + (count === 1 ? "" : "s") + "."); }
+			);
+		} else {
+			fallbackCopy();
+			showToast("Copied " + count + " note" + (count === 1 ? "" : "s") + ".");
+		}
+	});
+
+	// ── Clear all (two-click arm/confirm — no blocking dialog) ──
+	var clearBtn = document.getElementById("clearAll");
+	var armed = false;
+	var armTimer = null;
+	clearBtn.addEventListener("click", function () {
+		if (!armed) {
+			armed = true;
+			clearBtn.textContent = "Confirm clear";
+			clearBtn.classList.add("is-armed");
+			armTimer = window.setTimeout(function () {
+				armed = false;
+				clearBtn.textContent = "Clear all";
+				clearBtn.classList.remove("is-armed");
+			}, 3500);
+			return;
+		}
+		window.clearTimeout(armTimer);
+		armed = false;
+		clearBtn.textContent = "Clear all";
+		clearBtn.classList.remove("is-armed");
+		notes.forEach(function (n) {
+			var ta = n.querySelector("textarea");
+			var id = n.getAttribute("data-note-id");
+			if (ta) { ta.value = ""; }
+			n.classList.remove("has-content");
+			try { window.localStorage.removeItem(keyFor(id)); } catch (e) { /* ignore */ }
+		});
+		refreshCount();
+		showToast("All notes cleared.");
+	});
+})();
+</script>
+
+</body>
+</html>
