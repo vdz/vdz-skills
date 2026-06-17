@@ -18,3 +18,8 @@ To get a sense of where they're at, proactively have them restate them understan
 Quiz them with open-ended or multiple choice questions with AskUserQuestion (be sure to change up the order of the correct answer, and to not reveal the answer until after the questions are submitted). Show them code or have them use the debugger if necessary!
 
 /goal the session should not end until you've verified that the human has demonstrated that they understood everything on your list.
+
+<!-- Addition (not part of the original body): when the session ends, the running
+understanding-checklist md doc can be published as a single, beautiful standalone file —
+offer to render it with the `html-report` skill (`/html-report`, Editorial style suits a
+narrative "what you learned" write-up). Optional; keep teaching here, publish there. -->

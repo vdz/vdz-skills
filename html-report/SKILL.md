@@ -98,6 +98,27 @@ survive a reload but never touch a server.
 - **Never copy a source report's real content into a template.** Templates are
   content-free; live reports get real content but a fresh storage prefix.
 
+## Related skills — when the report should *move*
+
+This skill makes a **static, read-and-keep document**. If the deliverable should
+actually move, that's a different medium — don't try to fake it here:
+
+- **It should be a video** — an animated walkthrough, a narrated explainer, a product
+  tour, motion graphics, captions synced to a voiceover → use **`hyperframes`** (and its
+  family: `hyperframes-cli`, `hyperframes-media`, `hyperframes-registry`, all already
+  installed). HyperFrames produces HTML-based video; this skill produces a page you read.
+- **Rich in-composition animation** (timelines, seek-driven motion, 3D, After-Effects
+  exports) → the HyperFrames animation adapters are installed too: **`gsap`**, **`animejs`**,
+  **`lottie`**, **`three`**, **`css-animations`**. Reach for them when building a
+  HyperFrames composition, not when writing a report.
+- **Inside a report, keep motion light and self-contained.** A report stays one file with
+  no external JS/CSS (see *Discipline*), so any in-page motion is plain inline CSS
+  transitions/keyframes — a hover state, a gentle reveal — never a bundled animation
+  library. If the content really wants timeline-driven motion, that's a sign it should be
+  a HyperFrames video instead.
+
+Rule of thumb: **read-and-keep → here; watch-and-play → `hyperframes`.**
+
 ## Adding a new style
 
 A style is captured by reverse-engineering a report you like into a spec under

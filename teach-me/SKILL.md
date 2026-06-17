@@ -76,3 +76,10 @@ Keep a running markdown doc with checkboxes. Tick an item only once they've
 | Stopping at the first "why" | Keep drilling to the root rationale. |
 | Abstract explanations | Open the real file / run the debugger. |
 | Revealing quiz answers early | Hold until submitted. |
+
+## Publishing the checklist as a report
+
+The running understanding-checklist is a markdown working doc. When the session ends and
+the human wants a keepsake of what they now understand, offer to render it with the
+**`html-report`** skill (`/html-report`, Editorial style suits the narrative three-pillar
+write-up). Optional, end-of-session only — don't let it interrupt the teach→verify loop.

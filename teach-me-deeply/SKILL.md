@@ -49,3 +49,10 @@ Track understanding across three pillars. Tick an item only after they've demons
 ## Rule
 
 Understanding the problem is imperative — never let it slide. The session does not end until the human has demonstrated understanding of every item on the list.
+
+## Publishing the checklist as a report
+
+The running checklist is a markdown working doc. At session end, if the human wants a
+polished keepsake of what they understood, offer to render it with the **`html-report`**
+skill (`/html-report`, Editorial style suits the three-pillar write-up). Optional — never
+interrupt the teach-and-verify loop for it.

@@ -83,3 +83,11 @@ Add a note **the moment a decision/change/tradeoff/fyi occurs in the conversatio
 | Decision/change/tradeoff without a `Why:` | Add the why, or downgrade to `fyi`. |
 | Overwrote the existing file | Read → prepend → write. |
 | Paraphrased a load-bearing exact phrase | Use `<q class="verbatim">`. |
+
+## Publishing the log as a report
+
+This file is the *live* log — append-only, captured in the moment. When the work is done
+and you want a polished, shareable hand-off artifact (not a working log), hand it to the
+**`html-report`** skill: invoke `/html-report` and point it at `implementation-notes.html`.
+Its **Ledger** style fits an enumerated log of entries; **Editorial** fits a narrative
+write-up. Keep using this skill for capture — reach for `html-report` only to *publish*.

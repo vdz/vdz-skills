@@ -12,6 +12,7 @@ Review code changes for behavioral differences between the before and after code
 **Output format**:
 - List regressions first, numbered, with severity.
 - After the regressions section, add a "Cleared" section listing items that were reviewed and found to have no issues. Prefix each cleared item with a ✅ emoji.
+- By default the review is shown inline. If the user wants a shareable, kept artifact (to attach to a PR or hand off), offer to render it with the **`html-report`** skill — `/html-report`, **Ledger** style suits the numbered per-finding structure.
 
 **Scope (pass as arguments)**:
 - No arguments: review the most recent commit & show a hint of the possible arguments (below)
