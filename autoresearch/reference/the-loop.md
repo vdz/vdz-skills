@@ -18,8 +18,9 @@ One round = one keep-or-revert decision. Always, no exceptions:
    baseline, reset the plateau counter. Otherwise **revert** (git reset) and increment the
    plateau counter.
 6. **Log** — append the prose row to `results.md` (round #, hypothesis, change, before →
-   after, kept/reverted) *and* the structured **experiment record** (one JSONL line) to
-   `.autoresearch/experiments.jsonl`. Update `state.json`. See [visibility.md](visibility.md).
+   after, kept/reverted), then record the structured experiment via
+   `scripts/record.mjs` (writes the per-run log + the global cross-run ledger + registry in
+   one step). Update `state.json`. See [visibility.md](visibility.md) and [dashboard.md](dashboard.md).
 7. **Notify if warranted** — push on new-best, and on the terminal events below. See
    [visibility.md](visibility.md).
 8. **Check the stopping criterion** (below). Met → cancel the loop, notify, write the final

@@ -59,5 +59,5 @@ Several long-running loops need **isolation** and **one-glance aggregate visibil
 
 - **Aggregate cost** — budgets are per-run; the status table's round counts are the
   at-a-glance spend signal across runs. A global budget is possible but not built (stage II).
-- **Cross-run dashboard** — the visual view over all runs reads the per-run
-  `experiments.jsonl` files (or a merged global ledger). Stage II; see [visibility.md](visibility.md).
+- **Cross-run dashboard** — the visual view over all runs is built from the global ledger by
+  `scripts/build-dashboard.mjs`. See [dashboard.md](dashboard.md).

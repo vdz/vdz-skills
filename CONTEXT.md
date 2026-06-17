@@ -48,8 +48,11 @@ improve *anything*, not only ML training code.
   plain-text source of truth; the final morning summary is offered as an `html-report`.
 - **Experiment record** — one structured (JSONL) line per Round capturing run id, asset,
   hypothesis, change, score before → after, kept/reverted, best-so-far. The
-  machine-readable twin of the `results.md` prose entry; written so a future cross-run
-  **dashboard** can render history without reparsing prose.
+  machine-readable twin of the `results.md` prose entry.
+- **Cross-run ledger** — the global `~/.autoresearch/experiments.jsonl` (every Round of every
+  run, keyed by run id) + the run registry. `scripts/record.mjs` writes it; the **dashboard**
+  (`scripts/build-dashboard.mjs`) renders a self-contained interactive view over all runs —
+  normalized score curves, win rates, per-run drill-down.
 - **Status check** — a pull-only invocation (`/autoresearch status`) that reads `state.json`
   + the log and prints where the run stands, without running a Round.
 - **Notification** — a push signal (via the harness notifier) on events worth interrupting a

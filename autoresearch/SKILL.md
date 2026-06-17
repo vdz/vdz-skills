@@ -59,8 +59,9 @@ While the loop runs unattended, the human sees in via **pull** surfaces — `sta
 `results.md` (narrative), `git log` on the autoresearch branch (the **win trail** — only kept
 rounds commit, so it's a noise-free ledger of real improvements), and `/autoresearch status` —
 and **push** notifications on target-reached, plateau/stopped, refused/errored, and new-best.
-Each round also writes a structured `experiments.jsonl` record, shaped for a future cross-run
-dashboard (stage II, not built yet). Full model: [reference/visibility.md](reference/visibility.md).
+Each round also feeds a global **cross-run ledger**; `scripts/build-dashboard.mjs` renders a
+self-contained interactive dashboard over all runs. Full model:
+[reference/visibility.md](reference/visibility.md) · [reference/dashboard.md](reference/dashboard.md).
 
 ## Discipline
 

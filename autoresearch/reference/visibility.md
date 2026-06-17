@@ -80,10 +80,10 @@ history without reparsing prose:
 
 Get `ts` from `date -u +%FT%TZ`. Keep keys stable — the dashboard depends on them.
 
-## Stage II — global ledger + dashboard (not built yet)
+## Cross-run ledger + dashboard
 
-Planned, deliberately deferred: a **centralized cross-run log** (e.g. append each
-`experiments.jsonl` line to `~/.autoresearch/experiments.jsonl` keyed by `run_id`) that a
-**dashboard** reads to show every experiment across every run — score curves, win rates,
-which assets improved most. Stage I writes the per-run records in the right shape so the
-ledger is a cheap append and the dashboard a pure read; do **not** block stage I on it.
+Every round also feeds a **centralized cross-run ledger** (`~/.autoresearch/experiments.jsonl`
++ `runs.json` registry), and a generator emits a self-contained interactive dashboard over
+*all* runs — normalized score curves, win rates, per-run drill-down. Use `scripts/record.mjs`
+to write a round (per-run log + global ledger + registry in one call) and
+`scripts/build-dashboard.mjs` to (re)build the dashboard. Full spec: [dashboard.md](dashboard.md).
