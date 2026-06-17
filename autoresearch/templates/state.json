@@ -1,0 +1,20 @@
+{
+  "run_id": "",
+  "status": "active",
+  "asset_path": "",
+  "branch": "",
+  "scorer": { "type": "function", "direction": "lower-is-better", "path": "score.py" },
+  "baseline_score": null,
+  "best_score": null,
+  "baseline_commit": "",
+  "round": 0,
+  "round_in_progress": false,
+  "plateau_counter": 0,
+  "plateau_limit": 10,
+  "target_score": null,
+  "started_at": "",
+  "last_update": "",
+  "max_rounds": 200,
+  "max_wallclock_hours": 8,
+  "max_escalation_agents": 5
+}

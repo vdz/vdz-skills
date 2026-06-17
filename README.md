@@ -49,6 +49,18 @@ A focused reviewer that reads a diff for one thing only: *what might this change
 **Why I need it:** general code review wanders. Sometimes I just want the narrow,
 paranoid pass — regressions, nothing else — before I ship.
 
+### Self-improvement loop — [`autoresearch`](autoresearch/)
+
+Pick one thing, turn "is it good?" into one honest number, then run an unattended loop that
+each round makes one change, blind-scores it, keeps what wins and reverts what loses — until
+a stopping criterion is hit. Modelled on [Karpathy's `autoresearch`](https://github.com/karpathy/autoresearch),
+generalised so the target can be code, copy, a landing page, a config — anything writable.
+
+**Why I need it:** lots of improvement work is hill-climbing I'd otherwise babysit by hand.
+This makes the loop honest (locked scorer, blind judge, one keep/revert per round) and safe
+(all churn quarantined in a git-backed workspace; nothing touches my branch until I accept),
+and it refuses to start a loop that can't actually measure progress.
+
 ### Teaching — a deliberate trial: [`teaching`](teaching/) · [`teach-me`](teach-me/) · [`teach-me-deeply`](teach-me-deeply/) · [`explain-it-back`](explain-it-back/)
 
 Four overlapping takes on "teach me this." They're here **on purpose** — I'm dogfooding
