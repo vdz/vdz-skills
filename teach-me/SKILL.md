@@ -1,6 +1,6 @@
 ---
 name: teach-me
-description: Use when the user wants to deeply understand the work rather than just have it done — says "teach me this", "walk me through it", "make sure I understand", "I want to really get this", "onboard me", "explain so it sticks", or wants to learn the problem, solution, or codebase before/while planning or doing coding work.
+description: Use when the user wants to deeply understand the work rather than just have it done — says "teach me this", "walk me through it", "make sure I understand", "I want to really get this", "onboard me", "explain so it sticks", or wants to learn the problem, solution, or codebase before/while planning or doing coding work. Here Claude leads the explaining and verifies with quizzes; if the user should do the explaining while Claude diagnoses gaps, use explain-it-back instead.
 ---
 
 # Teach Me
@@ -23,8 +23,10 @@ explain and predict, not by what you delivered.
    again — until you hit the root rationale (a constraint, principle, or tradeoff).
 5. **Use the real artifact.** Point at actual files/lines, real diffs, the
    debugger — not abstractions.
-6. **The session doesn't end until the whole checklist is verified-understood.**
-   Not "explained" — *understood*.
+6. **The session doesn't end until the whole checklist is verified-understood —
+   or is parked properly.** Not "explained" — *understood*. If the human needs to
+   stop, bail, or defer mid-checklist, don't fight it: save state (see
+   *Persistence*) and end gracefully.
 
 ## The loop
 
@@ -76,6 +78,22 @@ Keep a running markdown doc with checkboxes. Tick an item only once they've
 | Stopping at the first "why" | Keep drilling to the root rationale. |
 | Abstract explanations | Open the real file / run the debugger. |
 | Revealing quiz answers early | Hold until submitted. |
+
+## Persistence — pausing, resuming, and the learning record
+
+The checklist lives in a file, not just in conversation: `docs/learning/<topic>.md`
+in the repo when the topic is repo-bound, else `~/.claude/learning/<topic>.md`.
+
+- **On pause / interruption:** write the checklist with current tick-state, plus a
+  short record line per verified item — *what was demonstrated, how (restated /
+  predicted / traced), on what date, and any gap left open*. Then end the session
+  cleanly.
+- **On invocation:** check those locations for an existing record on the topic first.
+  If found, **open by re-probing one previously-ticked item** (spaced re-check)
+  before teaching anything new — if it doesn't survive the re-probe, untick it.
+  Resume from the first unticked item, pitched at the level the record shows.
+- Records are append-mostly, like ADRs for learning: an insight recorded earlier may
+  be revised later — supersede, don't silently rewrite.
 
 ## Publishing the checklist as a report
 
