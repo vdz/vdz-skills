@@ -1,0 +1,28 @@
+ripe-skills
+  8df265f3f76c3769 1
+
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "base_commit_sha": "695bae47b6ec811d4beb61ea9f88d5c55435068a",
+  "prompts": {
+    "8df265f3f76c3769": {
+      "tool": "unknown",
+      "id": "8003f9b8-cebd-41d2-af96-8fe987acc5e8",
+      "model": "unknown",
+      "author": {
+        "human": "Yehuda Gilead <545253+vdz@users.noreply.github.com>"
+      },
+      "total_additions": 1,
+      "total_deletions": 1,
+      "sparkey": {
+        "attribution_precision": "commit"
+      }
+    }
+  },
+  "sparkey": {
+    "client_version": ""
+  }
+}
+Sparkey-Session-Id: 8003f9b8-cebd-41d2-af96-8fe987acc5e8
+Sparkey-Contributor-Uuid: 25f5f227-833d-47fa-9e95-a7511bdf660d
