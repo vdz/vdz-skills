@@ -1,0 +1,401 @@
+<meta charset="utf-8">
+<title>The Pocock Loop</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #F7F7F4;
+  --surface: #FFFFFF;
+  --ink: #1B1D22;
+  --muted: #5C6169;
+  --faint: #E2E2DC;
+  --code-bg: #EDEDE7;
+  --line-a: #0E8A5F;
+  --line-b: #2158B7;
+  --line-c: #B87717;
+  --line-d: #6E5A9E;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171B;
+    --surface: #1D2025;
+    --ink: #E7E8EA;
+    --muted: #9AA0A9;
+    --faint: #2C3037;
+    --code-bg: #24282E;
+    --line-a: #3BBE8C;
+    --line-b: #6D9EEA;
+    --line-c: #D99A3D;
+    --line-d: #A48CD1;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171B;
+  --surface: #1D2025;
+  --ink: #E7E8EA;
+  --muted: #9AA0A9;
+  --faint: #2C3037;
+  --code-bg: #24282E;
+  --line-a: #3BBE8C;
+  --line-b: #6D9EEA;
+  --line-c: #D99A3D;
+  --line-d: #A48CD1;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  margin: 0;
+}
+main { max-width: 880px; margin: 0 auto; padding: 0 32px 96px; }
+h1, h2, h3 { font-family: "Archivo", "Helvetica Neue", Arial, sans-serif; text-wrap: balance; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); font-weight: 700; line-height: 1.04; letter-spacing: -0.015em; margin: 0 0 20px; }
+h2 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 6px; }
+h3 { font-size: 1.05rem; font-weight: 600; margin: 0 0 8px; }
+p { max-width: 66ch; margin: 0 0 16px; }
+code, .sk {
+  font-family: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 0.86em;
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+a { color: inherit; }
+header { padding: 88px 0 24px; }
+.eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 16px;
+}
+.eyebrow b { color: var(--accent, var(--ink)); font-weight: 500; }
+.lede { font-size: 1.22rem; line-height: 1.5; color: var(--muted); max-width: 56ch; }
+.meta { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.78rem; color: var(--muted); margin-top: 28px; }
+section { padding: 72px 0 0; }
+section.path { --accent: var(--ink); }
+section.path .eyebrow b { color: var(--accent); }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 40px; margin: 20px 0 0; }
+@media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+.two-col h3 { font-size: 0.78rem; font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.two-col p { font-size: 0.97rem; margin-bottom: 8px; }
+figure { margin: 36px 0 8px; }
+figure svg { max-width: 100%; height: auto; display: block; }
+figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 10px; max-width: 66ch; }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; margin: 24px 0 0; }
+th { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.72rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 0 20px 10px 0; }
+td { padding: 9px 20px 9px 0; border-top: 1px solid var(--faint); vertical-align: top; }
+td:first-child { color: var(--muted); }
+.table-wrap { overflow-x: auto; }
+.habits { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 36px 0 0; }
+@media (max-width: 640px) { .habits { grid-template-columns: 1fr; } }
+.habits > div { border-top: 3px solid var(--ink); padding-top: 14px; }
+.habits p { font-size: 0.97rem; margin: 0; }
+.habits h3 { font-size: 1.02rem; }
+ol.ladder { list-style: none; counter-reset: step; margin: 32px 0 0; padding: 0; max-width: 66ch; }
+ol.ladder li { counter-increment: step; display: grid; grid-template-columns: 56px 1fr; gap: 0 16px; padding: 18px 0; border-top: 1px solid var(--faint); }
+ol.ladder li::before {
+  content: counter(step);
+  font-family: "Archivo", sans-serif; font-weight: 700; font-size: 1.6rem;
+  color: var(--line-d); line-height: 1;
+}
+ol.ladder li strong { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 500; font-size: 0.95rem; display: block; margin-bottom: 2px; }
+ol.ladder li p { font-size: 0.95rem; margin: 0; color: var(--muted); }
+ul.gaps { margin: 20px 0 0; padding: 0 0 0 1.1em; max-width: 66ch; }
+ul.gaps li { margin-bottom: 10px; font-size: 0.97rem; }
+footer { margin-top: 96px; padding-top: 24px; border-top: 1px solid var(--faint); font-size: 0.85rem; color: var(--muted); }
+footer p { margin-bottom: 6px; }
+.rule-callout { border-left: 3px solid var(--line-b); padding: 4px 0 4px 20px; margin: 28px 0; max-width: 62ch; }
+.rule-callout p { margin: 0; font-size: 1.02rem; }
+</style>
+
+<main>
+<header>
+  <p class="eyebrow">Team briefing · MCE R&amp;D · Aug 2026</p>
+  <h1>The Pocock Loop</h1>
+  <p class="lede">A repeatable pipeline for agent coding: four routes, one routing question, and the context-window rules that hold it together.</p>
+  <p class="meta">Source: mattpocock/skills v1.2.3 · the Aug 14 video (10:18, ~261K views) · aihero.dev</p>
+</header>
+
+<section id="briefing">
+  <h2>The two-minute version</h2>
+  <p>Matt Pocock — the TypeScript educator behind Total TypeScript — posted a ten-minute video walking through all 25 skills in his open-source AI coding workflow (<a href="https://github.com/mattpocock/skills">github.com/mattpocock/skills</a>, MIT). It took off after Theo from t3.gg endorsed the interview skill: "helps a ton with getting agents aligned with my brain."</p>
+  <p>The core idea: an agent left to guess writes plausible code that quietly rots a codebase. So instead of prompting ad hoc, you run a fixed pipeline of skills — small instruction packages — where each one's output is the next one's input. Tune one step and the whole chain improves.</p>
+  <p>The spine is five skills, in order. <span class="sk">grill-with-docs</span>: the agent interviews <em>you</em>, one question at a time, until you share one understanding — decisions land in the repo as a glossary and decision records. <span class="sk">to-spec</span>: turns that finished conversation into a written spec; no new decisions allowed. <span class="sk">to-tickets</span>: cuts the spec into small vertical-slice tickets, each buildable in one fresh agent session. <span class="sk">implement</span>: builds one ticket, test-first, no debating. <span class="sk">code-review</span>: checks the diff against repo standards and against the spec, separately.</p>
+  <p>Around the spine sit shaping tools for before you know what to build (<span class="sk">wayfinder</span> maps a big foggy effort as decision tickets you settle one session at a time; <span class="sk">prototype</span> answers a design question with throwaway code; <span class="sk">research</span> fetches cited answers), upkeep tools (bug diagnosis, triage for incoming issues, merge-conflict resolution, a periodic architecture health check), and session tools (<span class="sk">handoff</span> writes up a session so another agent or colleague can continue it).</p>
+  <p>Why it matters for us: this is the most complete public answer to the question we keep hitting — how do you make agent coding repeatable instead of vibes? The skills are free and install as a Claude Code plugin in one command; we already run a subset internally. His paid Crash Course teaches the concepts behind them, but the skills and the per-skill articles on aihero.dev cover most of it.</p>
+  <div class="habits">
+    <div>
+      <h3>Habit 1 — make the agent interview you first</h3>
+      <p>Misalignment is the expensive failure. Ten minutes of being grilled before any code costs less than one wrong afternoon of plausible-looking output.</p>
+    </div>
+    <div>
+      <h3>Habit 2 — size work to one fresh session</h3>
+      <p>Agents degrade as context fills. Every ticket is cut to fit a single clean context window, and gets one.</p>
+    </div>
+  </div>
+</section>
+
+<section id="routing">
+  <p class="eyebrow">The routing question</p>
+  <h2>Session count, not project size</h2>
+  <p>Every piece of work enters through one question: how many agent sessions does it need? Not "is this a big project" — sessions.</p>
+  <figure>
+    <svg viewBox="0 0 800 250" role="img" aria-label="Routing diagram: the session-count question splits new work into Path A, B, or C; incoming issues and bugs bypass it into triage and diagnosing-bugs.">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+      <g fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="20" y="95" width="150" height="60" rx="4"/>
+        <line x1="170" y1="125" x2="240" y2="125" marker-end="url(#arr)"/>
+        <rect x="244" y="95" width="170" height="60" rx="4"/>
+        <line x1="414" y1="125" x2="500" y2="55" marker-end="url(#arr)"/>
+        <line x1="414" y1="125" x2="500" y2="125" marker-end="url(#arr)"/>
+        <line x1="414" y1="125" x2="500" y2="195" marker-end="url(#arr)"/>
+      </g>
+      <g font-family="Source Sans 3, sans-serif" font-size="13" fill="currentColor">
+        <text x="95" y="120" text-anchor="middle">an idea for</text>
+        <text x="95" y="138" text-anchor="middle">new work</text>
+        <text x="329" y="120" text-anchor="middle">how many agent</text>
+        <text x="329" y="138" text-anchor="middle">sessions?</text>
+      </g>
+      <g font-family="IBM Plex Mono, monospace" font-size="12">
+        <text x="512" y="48" fill="var(--line-a)">one — Path A</text>
+        <text x="512" y="66" fill="currentColor" opacity="0.65" font-family="Source Sans 3, sans-serif">grill → implement, same context</text>
+        <text x="512" y="118" fill="var(--line-b)">several to build — Path B</text>
+        <text x="512" y="136" fill="currentColor" opacity="0.65" font-family="Source Sans 3, sans-serif">grill → spec → tickets → implement each</text>
+        <text x="512" y="188" fill="var(--line-c)">can't even plan in one — Path C</text>
+        <text x="512" y="206" fill="currentColor" opacity="0.65" font-family="Source Sans 3, sans-serif">wayfinder maps decisions first</text>
+      </g>
+      <g font-family="Source Sans 3, sans-serif" font-size="12.5" fill="currentColor" opacity="0.65">
+        <text x="20" y="222">Bypasses: issues that arrive from other people enter via</text>
+        <text x="20" y="240">triage, never the flow head · broken things go to diagnosing-bugs, not grilling</text>
+      </g>
+    </svg>
+    <figcaption>The first fork. Everything else in the system hangs off this one question.</figcaption>
+  </figure>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Situation</th><th>Route</th></tr>
+    <tr><td>No working directory yet</td><td><span class="sk">/grill-me</span> — same interview, no paper trail</td></tr>
+    <tr><td>Design question needing runnable code</td><td><span class="sk">prototype</span> detour on a <span class="sk">prototype/*</span> branch; always deleted from main</td></tr>
+    <tr><td>Bug report or request from someone else</td><td><span class="sk">/triage</span> — merges into the flow at <span class="sk">ready-for-agent</span></td></tr>
+    <tr><td>Hard bug / perf regression</td><td><span class="sk">diagnosing-bugs</span> — phase 1 builds a red-capable feedback loop; that is 90% of the fix</td></tr>
+    <tr><td>Unsure which path</td><td><span class="sk">/ask-matt</span> — recommends the next thing to type, then stops</td></tr>
+  </table>
+  </div>
+</section>
+
+<section class="path" style="--accent: var(--line-a)" id="path-a">
+  <p class="eyebrow"><b>Path A</b> · single-session feature</p>
+  <h2>Grill, then build — no spec, no tickets</h2>
+  <figure>
+    <svg viewBox="0 0 800 170" role="img" aria-label="Path A route: grill-with-docs, implement, and code-review run as stations on one line inside a single context window, ending in one commit.">
+      <defs>
+        <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--line-a)"/>
+        </marker>
+      </defs>
+      <path d="M70 60 L640 60" stroke="var(--line-a)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <line x1="640" y1="60" x2="726" y2="60" stroke="var(--line-a)" stroke-width="2" stroke-dasharray="3 5" marker-end="url(#arrA)"/>
+      <g fill="var(--bg)" stroke="var(--line-a)" stroke-width="3.5">
+        <circle cx="90" cy="60" r="9"/>
+        <circle cx="340" cy="60" r="9"/>
+        <circle cx="570" cy="60" r="9"/>
+      </g>
+      <g font-family="IBM Plex Mono, monospace" font-size="12.5" fill="currentColor" text-anchor="middle">
+        <text x="90" y="95">/grill-with-docs</text>
+        <text x="340" y="95">/implement</text>
+        <text x="570" y="95">code-review</text>
+        <text x="736" y="64" text-anchor="start" font-family="Source Sans 3, sans-serif">commit</text>
+      </g>
+      <g font-family="Source Sans 3, sans-serif" font-size="12" fill="currentColor" opacity="0.65" text-anchor="middle">
+        <text x="90" y="115">interview to shared</text>
+        <text x="90" y="130">understanding</text>
+        <text x="340" y="115">TDD at the seams</text>
+        <text x="340" y="130">agreed while grilling</text>
+        <text x="570" y="115">standards + spec axes,</text>
+        <text x="570" y="130">parallel sub-agents</text>
+      </g>
+      <g stroke="currentColor" fill="none" stroke-width="1.2" opacity="0.7">
+        <path d="M70 32 L70 24 L640 24 L640 32"/>
+      </g>
+      <text x="355" y="16" font-family="Source Sans 3, sans-serif" font-size="12" fill="currentColor" opacity="0.7" text-anchor="middle">one context window — never cleared</text>
+    </svg>
+    <figcaption>The whole feature lives and dies in one window. <span class="sk">implement</span> asks nothing — every question was answered during grilling.</figcaption>
+  </figure>
+  <div class="two-col">
+    <div>
+      <h3>What it writes down</h3>
+      <p>Domain terms go into <span class="sk">CONTEXT.md</span> as they resolve. An ADR only when a decision passes all three gates: hard to reverse, surprising, and a real trade-off. Zero ADRs is a valid outcome.</p>
+    </div>
+    <div>
+      <h3>When not to use it</h3>
+      <p>The build needs more than one session (B), the route itself is foggy (C), the issue came from someone else (<span class="sk">/triage</span>), or the change is trivial — then just do it.</p>
+    </div>
+  </div>
+</section>
+
+<section class="path" style="--accent: var(--line-b)" id="path-b">
+  <p class="eyebrow"><b>Path B</b> · multi-session build</p>
+  <h2>Decide once, write it down once, execute per ticket</h2>
+  <figure>
+    <svg viewBox="0 0 800 320" role="img" aria-label="Path B route: grill-with-docs, to-spec, and to-tickets share one unbroken context; the line then splits into three implement tickets, each in a fresh session with /clear between them.">
+      <defs>
+        <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--line-b)"/>
+        </marker>
+      </defs>
+      <path d="M70 60 L620 60" stroke="var(--line-b)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M620 60 Q660 60 660 100 L660 210 Q660 250 620 250 L130 250" stroke="var(--line-b)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <g fill="var(--bg)" stroke="var(--line-b)" stroke-width="3.5">
+        <circle cx="90" cy="60" r="9"/>
+        <circle cx="330" cy="60" r="9"/>
+        <circle cx="560" cy="60" r="9"/>
+      </g>
+      <g fill="var(--line-b)">
+        <rect x="510" y="241" width="18" height="18" rx="2"/>
+        <rect x="330" y="241" width="18" height="18" rx="2"/>
+        <rect x="150" y="241" width="18" height="18" rx="2"/>
+      </g>
+      <g font-family="IBM Plex Mono, monospace" font-size="12.5" fill="currentColor" text-anchor="middle">
+        <text x="90" y="95">/grill-with-docs</text>
+        <text x="330" y="95">/to-spec</text>
+        <text x="560" y="95">/to-tickets</text>
+        <text x="519" y="285">/implement #1</text>
+        <text x="339" y="285">/implement #2</text>
+        <text x="159" y="285">/implement #3</text>
+      </g>
+      <g font-family="Source Sans 3, sans-serif" font-size="12" fill="currentColor" opacity="0.65" text-anchor="middle">
+        <text x="330" y="113">record of decisions</text>
+        <text x="330" y="128">already made</text>
+        <text x="560" y="113">tracer-bullet slices,</text>
+        <text x="560" y="128">you approve granularity</text>
+        <text x="519" y="303">fresh session</text>
+        <text x="339" y="303">fresh session</text>
+        <text x="159" y="303">fresh session</text>
+      </g>
+      <g font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity="0.7" text-anchor="middle">
+        <text x="429" y="238">/clear</text>
+        <text x="249" y="238">/clear</text>
+      </g>
+      <g stroke="currentColor" fill="none" stroke-width="1.2" opacity="0.7">
+        <path d="M70 32 L70 24 L620 24 L620 32"/>
+      </g>
+      <text x="345" y="16" font-family="Source Sans 3, sans-serif" font-size="12" fill="currentColor" opacity="0.7" text-anchor="middle">one unbroken context — never /clear or /compact inside this span</text>
+    </svg>
+    <figcaption>Planning happens once, in one window. Each ticket then gets a clean context of its own — one ticket, one session, one commit.</figcaption>
+  </figure>
+  <div class="two-col">
+    <div>
+      <h3>The spec is a record</h3>
+      <p>"A record of decisions already made, not a place where new ones get made." <span class="sk">to-spec</span> never re-interviews; it sketches testing seams first (ideal count: one) and publishes a single tracker issue.</p>
+    </div>
+    <div>
+      <h3>Tickets are tracer bullets</h3>
+      <p>Vertical slices through schema, API, UI, tests — each independently demonstrable, each sized to one context window, blocking edges declared. Wide refactors get expand–contract sequencing.</p>
+    </div>
+    <div>
+      <h3>Known gap</h3>
+      <p><span class="sk">implement</span> ends at the commit and never closes the ticket. Close it yourself, or downstream tickets never visibly unblock.</p>
+    </div>
+    <div>
+      <h3>Never in parallel</h3>
+      <p>One checkout, one implement at a time. Parallel implements in the same working copy corrupt each other's assumptions.</p>
+    </div>
+  </div>
+</section>
+
+<section class="path" style="--accent: var(--line-c)" id="path-c">
+  <p class="eyebrow"><b>Path C</b> · foggy, huge efforts</p>
+  <h2>Map the decisions before anyone plans the build</h2>
+  <figure>
+    <svg viewBox="0 0 800 260" role="img" aria-label="Path C route: wayfinder charts a map issue with decision tickets; one decision resolves per session in a loop; when the map clears, to-spec collapses it and the work joins Path B.">
+      <defs>
+        <marker id="arrC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--line-c)"/>
+        </marker>
+        <marker id="arrB2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--line-b)"/>
+        </marker>
+      </defs>
+      <path d="M70 80 L300 80" stroke="var(--line-c)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M300 80 L520 80" stroke="var(--line-c)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M520 80 Q560 80 570 110" stroke="var(--line-c)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M570 110 Q600 170 660 170" stroke="var(--line-b)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <line x1="660" y1="170" x2="730" y2="170" stroke="var(--line-b)" stroke-width="2" stroke-dasharray="3 5" marker-end="url(#arrB2)"/>
+      <path d="M300 71 Q270 20 300 14 Q330 20 300 71" stroke="var(--line-c)" stroke-width="2" fill="none" marker-end="url(#arrC)"/>
+      <g fill="var(--bg)" stroke="var(--line-c)" stroke-width="3.5">
+        <circle cx="90" cy="80" r="9"/>
+        <circle cx="300" cy="80" r="9"/>
+        <circle cx="520" cy="80" r="9"/>
+      </g>
+      <g font-family="IBM Plex Mono, monospace" font-size="12.5" fill="currentColor" text-anchor="middle">
+        <text x="90" y="115">/wayfinder</text>
+        <text x="300" y="115">decision tickets</text>
+        <text x="520" y="115">/to-spec #map</text>
+      </g>
+      <g font-family="Source Sans 3, sans-serif" font-size="12" fill="currentColor" opacity="0.65" text-anchor="middle">
+        <text x="90" y="133">grill the destination,</text>
+        <text x="90" y="148">chart the fog as a map issue</text>
+        <text x="300" y="133">one frontier decision per session:</text>
+        <text x="300" y="148">grilling · prototype · research · task</text>
+        <text x="520" y="133">map cleared —</text>
+        <text x="520" y="148">collapse into one spec</text>
+      </g>
+      <text x="300" y="10" font-family="Source Sans 3, sans-serif" font-size="11.5" fill="currentColor" opacity="0.7" text-anchor="middle">repeat across sessions</text>
+      <text x="668" y="150" font-family="Source Sans 3, sans-serif" font-size="12" fill="currentColor" opacity="0.8">joins Path B →</text>
+      <text x="668" y="196" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--line-b)">to-tickets…</text>
+    </svg>
+    <figcaption>Wayfinder plans; it never does. It produces no spec and no code itself — its output is a cleared map of settled decisions.</figcaption>
+  </figure>
+  <div class="two-col">
+    <div>
+      <h3>The map is shared state</h3>
+      <p>A tracker issue (<span class="sk">wayfinder:map</span>) holding the destination, decisions so far, remaining fog, and out-of-scope — plus one child ticket per open decision, with blocking edges.</p>
+    </div>
+    <div>
+      <h3>One decision per session</h3>
+      <p>Pick one frontier ticket — open, unblocked, unclaimed. Resolve it with the matching skill, post the resolution, close it, add one line to the map. Research tickets are the only exception; they run AFK in parallel.</p>
+    </div>
+  </div>
+</section>
+
+<section class="path" style="--accent: var(--line-d)" id="path-d">
+  <p class="eyebrow"><b>Path D</b> · phase boundaries</p>
+  <h2>Five continuations, in strict order</h2>
+  <p>At every boundary between phases — grilling done, ticket shipped, QA starting — or when context nears the ~150k smart zone, walk this list top to bottom and take the first option that fits. <span class="sk">/compact</span> is the default; <span class="sk">/handoff</span> is the exception.</p>
+  <ol class="ladder">
+    <li><div><strong>Continue</strong><p>Only when the next phase needs the current context verbatim — the one move that keeps the session a primary source. Rule it out first.</p></div></li>
+    <li><div><strong>/clear</strong><p>Everything behind you is disposable. The move between implement tickets.</p></div></li>
+    <li><div><strong>/handoff</strong><p>Only when work must travel — exactly four triggers: new harness, new directory or repo, a colleague, or forking a side task mid-phase. Writes one markdown file to the OS temp dir; references specs and ADRs by path, never copies them. Review it and downgrade unverified assumptions before handing it over. It buys portability, not compression.</p></div></li>
+    <li><div><strong>Subagent</strong><p>Tightly scoped, unattended work that shouldn't pollute the main session.</p></div></li>
+    <li><div><strong>/compact</strong><p>The default fallback: same harness, same directory, same person, phase done. Compact at boundaries, never mid-phase.</p></div></li>
+  </ol>
+  <div class="rule-callout">
+    <p><strong>The one hard rule:</strong> <span class="sk">grill-with-docs</span> → <span class="sk">to-spec</span> → <span class="sk">to-tickets</span> share one unbroken context. Never <span class="sk">/clear</span> or <span class="sk">/compact</span> between them.</p>
+  </div>
+</section>
+
+<section id="gaps">
+  <h2>Sharp edges, from the author's own docs</h2>
+  <ul class="gaps">
+    <li><span class="sk">implement</span> never closes its ticket — close it manually or blocked tickets never visibly unblock.</li>
+    <li><span class="sk">/ask-matt</span> falsely reports slash-only skills as "not installed" — the harness omits them from its injected list.</li>
+    <li><span class="sk">grill-with-docs</span> file-writing silently fails when wrapped in another orchestration layer — run it directly.</li>
+    <li>Dead names still floating around older articles: <span class="sk">/to-prd</span> → <span class="sk">to-spec</span>, <span class="sk">/to-issues</span> → <span class="sk">to-tickets</span>, <span class="sk">/diagnose</span> → <span class="sk">diagnosing-bugs</span>.</li>
+    <li>Once per repo, before any of this: <span class="sk">/setup-matt-pocock-skills</span> — tracker choice, triage labels, domain-doc layout.</li>
+  </ul>
+</section>
+
+<footer>
+  <p>Compiled Aug 19, 2026 from the local plugin docs (v1.2.3 — current), aihero.dev per-skill articles, and reconstruction of the Aug 14 video. The video exists only as a native X upload; ordering and emphasis claims from it are secondhand.</p>
+  <p>Full agent-facing policy: <span class="sk">~/Dev/vdz-skills/docs/pocock-workflow-policy.md</span> · Repo: github.com/mattpocock/skills</p>
+</footer>
+</main>

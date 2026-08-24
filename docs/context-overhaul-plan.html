@@ -1,0 +1,1707 @@
+<!doctype html>
+<html lang="en" data-theme="report">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Context Overhaul — Ripe Skills &amp; Global Claude Code Context</title>
+<style>
+	:root {
+		/* Tempered, warm editorial palette — no pure black on pure white. */
+		--paper: #f6f2ea;
+		--paper-raised: #fbf8f2;
+		--ink: #2f2c27;
+		--ink-2: #5a554c;
+		--ink-3: #8d877b;
+		--hair: #e2dccf;
+		--hair-strong: #cfc7b6;
+		--accent: #a8472b;
+		--accent-strong: #8a3a22;
+		--accent-soft: #f2e4dc;
+		--good: #4f7a4a;
+		--good-soft: #e7efe3;
+		--block: #9a6b1f;
+		--block-soft: #f3e9d2;
+		--slide: #2b2924;
+		--slide-ink: #f3ece0;
+		--slide-ink-2: #c4bba9;
+		--slide-accent: #e0a07f;
+
+		--font-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+		--font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+		--font-mono: "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, monospace;
+
+		--maxw: 920px;
+		--r: 14px;
+		--r-sm: 9px;
+	}
+
+	* { box-sizing: border-box; }
+
+	html { scroll-behavior: smooth; }
+
+	body {
+		margin: 0;
+		background: var(--paper);
+		color: var(--ink);
+		font-family: var(--font-sans);
+		/* Larger base text + generous leading. */
+		font-size: 18px;
+		line-height: 1.72;
+		-webkit-font-smoothing: antialiased;
+		text-rendering: optimizeLegibility;
+	}
+
+	/* ── Sticky toolbar ── */
+	.toolbar {
+		position: sticky;
+		top: 0;
+		z-index: 50;
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		padding: 12px clamp(18px, 5vw, 48px);
+		background: color-mix(in srgb, var(--paper) 88%, transparent);
+		backdrop-filter: saturate(1.1) blur(8px);
+		border-bottom: 1px solid var(--hair);
+	}
+	.toolbar .brand {
+		font-family: var(--font-mono);
+		font-size: 12.5px;
+		letter-spacing: 0.04em;
+		color: var(--ink-3);
+		text-transform: uppercase;
+		margin-right: auto;
+	}
+	.toolbar .brand b { color: var(--accent-strong); font-weight: 600; }
+	.tbtn {
+		font-family: var(--font-sans);
+		font-size: 14.5px;
+		font-weight: 500;
+		color: var(--ink);
+		background: var(--paper-raised);
+		border: 1px solid var(--hair-strong);
+		border-radius: var(--r-sm);
+		padding: 7px 14px;
+		cursor: pointer;
+		transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+	}
+	.tbtn:hover { border-color: var(--accent); color: var(--accent-strong); }
+	.tbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+	.tbtn.is-armed { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+	.note-count {
+		font-family: var(--font-mono);
+		font-size: 12.5px;
+		color: var(--ink-3);
+		min-width: 7.5em;
+		text-align: right;
+	}
+	.note-count b { color: var(--accent-strong); }
+
+	/* ── Layout shell ── */
+	main {
+		max-width: var(--maxw);
+		margin: 0 auto;
+		padding: 0 clamp(18px, 5vw, 48px) 120px;
+	}
+
+	header.masthead {
+		padding: 64px 0 36px;
+		border-bottom: 2px solid var(--ink);
+		margin-bottom: 8px;
+	}
+	header.masthead .kicker {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--accent-strong);
+		margin: 0 0 14px;
+	}
+	header.masthead h1 {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		font-size: clamp(34px, 6vw, 52px);
+		line-height: 1.08;
+		letter-spacing: -0.015em;
+		margin: 0 0 18px;
+	}
+	header.masthead .standfirst {
+		font-size: 20px;
+		line-height: 1.6;
+		color: var(--ink-2);
+		max-width: 42em;
+		margin: 0 0 24px;
+	}
+	.meta-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px 22px;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--ink-3);
+	}
+	.meta-row a { color: var(--accent-strong); text-decoration: none; border-bottom: 1px solid var(--accent-soft); }
+	.meta-row a:hover { border-bottom-color: var(--accent); }
+	.meta-row .tally b { color: var(--ink); font-weight: 600; }
+
+	/* ── Table of contents ── */
+	nav.toc {
+		margin: 40px 0;
+		padding: 22px 26px;
+		background: var(--paper-raised);
+		border: 1px solid var(--hair);
+		border-radius: var(--r);
+	}
+	nav.toc h2 {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		margin: 0 0 14px;
+	}
+	nav.toc ol {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+		gap: 6px 28px;
+	}
+	nav.toc li { display: flex; gap: 10px; align-items: baseline; }
+	nav.toc .tn {
+		font-family: var(--font-mono);
+		font-size: 12.5px;
+		font-weight: 600;
+		color: var(--accent-strong);
+		min-width: 2.4em;
+	}
+	nav.toc a { color: var(--ink); text-decoration: none; line-height: 1.45; }
+	nav.toc a:hover { color: var(--accent-strong); }
+
+	/* ── Section + ticket cards ── */
+	section { margin: 56px 0 0; scroll-margin-top: 80px; }
+	.section-head {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		border-bottom: 1px solid var(--hair);
+		padding-bottom: 8px;
+		margin: 0 0 26px;
+	}
+
+	h2.block-title {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		font-size: 28px;
+		line-height: 1.2;
+		letter-spacing: -0.01em;
+		margin: 0 0 18px;
+	}
+
+	.ticket {
+		background: var(--paper-raised);
+		border: 1px solid var(--hair);
+		border-radius: var(--r);
+		padding: 30px clamp(20px, 4vw, 34px);
+		margin: 26px 0;
+	}
+	.ticket-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 6px;
+	}
+	.badge {
+		font-family: var(--font-mono);
+		font-weight: 600;
+		font-size: 13px;
+		color: #fff;
+		background: var(--accent);
+		border-radius: 7px;
+		padding: 3px 9px;
+		letter-spacing: 0.02em;
+	}
+	.jira {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--ink-3);
+		text-decoration: none;
+		border-bottom: 1px solid transparent;
+	}
+	.jira:hover { color: var(--accent-strong); border-bottom-color: var(--accent-soft); }
+	.pill {
+		margin-left: auto;
+		font-family: var(--font-mono);
+		font-size: 11.5px;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		padding: 3px 11px;
+		border-radius: var(--r-pill, 999px);
+	}
+	.pill.shipped { color: var(--good); background: var(--good-soft); }
+	.pill.blocked { color: var(--block); background: var(--block-soft); }
+
+	.ticket h3 {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		font-size: 23px;
+		line-height: 1.25;
+		letter-spacing: -0.01em;
+		margin: 6px 0 18px;
+	}
+
+	.ask {
+		margin: 0 0 22px;
+		padding: 14px 18px;
+		background: var(--paper);
+		border-left: 3px solid var(--hair-strong);
+		border-radius: 0 var(--r-sm) var(--r-sm) 0;
+	}
+	.ask .ask-label {
+		display: block;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		margin-bottom: 6px;
+	}
+	.ask q {
+		font-family: var(--font-serif);
+		font-style: italic;
+		font-size: 17px;
+		color: var(--ink-2);
+		quotes: "“" "”";
+		line-height: 1.55;
+	}
+	.ask q + q { display: block; margin-top: 6px; }
+
+	.crux-label {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--accent-strong);
+		margin: 4px 0 12px;
+	}
+	.decisions { margin: 0; padding: 0; list-style: none; }
+	.decisions > li {
+		position: relative;
+		padding: 0 0 16px 26px;
+		margin: 0;
+	}
+	.decisions > li::before {
+		content: "";
+		position: absolute;
+		left: 4px;
+		top: 11px;
+		width: 8px;
+		height: 8px;
+		border-radius: 2px;
+		background: var(--accent);
+		transform: rotate(45deg);
+	}
+	.decisions > li:last-child { padding-bottom: 0; }
+	.decisions .d-lead { font-weight: 600; color: var(--ink); }
+	.decisions code {
+		font-family: var(--font-mono);
+		font-size: 0.86em;
+		background: var(--accent-soft);
+		color: var(--accent-strong);
+		padding: 1px 5px;
+		border-radius: 5px;
+	}
+
+	/* ── Per-ticket screenshot ── */
+	.shot { margin: 2px 0 22px; }
+	.shot img {
+		display: block;
+		width: 100%;
+		height: auto;
+		border: 1px solid var(--hair-strong);
+		border-radius: var(--r-sm);
+		background: #fff;
+		box-shadow: 0 1px 2px rgba(47, 44, 39, 0.05), 0 10px 28px rgba(47, 44, 39, 0.08);
+	}
+	.shot figcaption {
+		margin-top: 10px;
+		font-family: var(--font-mono);
+		font-size: 11.5px;
+		line-height: 1.5;
+		letter-spacing: 0.02em;
+		color: var(--ink-3);
+		display: flex;
+		gap: 9px;
+	}
+	.shot figcaption::before {
+		content: "";
+		flex: none;
+		width: 8px;
+		height: 8px;
+		margin-top: 4px;
+		border-radius: 2px;
+		background: var(--accent);
+		transform: rotate(45deg);
+	}
+	.shot--empty .shot-frame {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding: 20px 22px;
+		border: 1px dashed var(--hair-strong);
+		border-radius: var(--r-sm);
+		background: var(--paper);
+	}
+	.shot--empty .shot-glyph { flex: none; color: var(--hair-strong); }
+	.shot--empty .shot-glyph svg { display: block; }
+	.shot--empty .shot-text { font-family: var(--font-sans); font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+	.shot--empty .shot-text b {
+		display: block;
+		margin-bottom: 3px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+	}
+
+	/* ── Raw-client-ask slide frame ── */
+	.slide-wrap { margin: 40px 0 8px; }
+	.slide {
+		position: relative;
+		background: var(--slide);
+		color: var(--slide-ink);
+		border-radius: 18px;
+		padding: clamp(26px, 5vw, 52px);
+		box-shadow: 0 24px 60px -28px rgba(43, 41, 36, 0.7), 0 2px 0 rgba(255,255,255,0.04) inset;
+		overflow: hidden;
+	}
+	.slide::after {
+		content: "VERBATIM ASK";
+		position: absolute;
+		top: 20px;
+		right: 26px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.22em;
+		color: var(--slide-ink-2);
+		opacity: 0.8;
+	}
+	.slide .slide-kicker {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--slide-accent);
+		margin: 0 0 6px;
+	}
+	.slide h2 {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		font-size: clamp(24px, 4vw, 34px);
+		line-height: 1.14;
+		letter-spacing: -0.01em;
+		margin: 0 0 4px;
+		color: var(--slide-ink);
+	}
+	.slide .slide-sub {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--slide-ink-2);
+		margin: 0 0 26px;
+	}
+	.slide .preamble {
+		font-style: italic;
+		color: var(--slide-ink-2);
+		border-left: 2px solid var(--slide-accent);
+		padding-left: 16px;
+		margin: 0 0 26px;
+		max-width: 46em;
+	}
+	.slide .ask-group { margin: 0 0 22px; }
+	.slide .ask-group:last-child { margin-bottom: 0; }
+	.slide .ask-group > .grp {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--slide-accent);
+		margin: 0 0 10px;
+		border-bottom: 1px solid rgba(224, 160, 127, 0.25);
+		padding-bottom: 6px;
+	}
+	.slide ul {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.slide ul li {
+		position: relative;
+		padding: 5px 0 5px 22px;
+		font-family: var(--font-mono);
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--slide-ink);
+	}
+	.slide ul li::before {
+		content: "—";
+		position: absolute;
+		left: 0;
+		color: var(--slide-ink-2);
+	}
+
+	/* ── Annotation infra ── */
+	.note {
+		margin-top: 22px;
+		border-top: 1px dashed var(--hair-strong);
+		padding-top: 14px;
+	}
+	.note-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		font-family: var(--font-sans);
+		font-size: 13.5px;
+		font-weight: 500;
+		color: var(--ink-3);
+		background: none;
+		border: 0;
+		padding: 2px 0;
+		cursor: pointer;
+	}
+	.note-toggle:hover { color: var(--accent-strong); }
+	.note-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+	.note-toggle .dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--hair-strong);
+		flex: none;
+	}
+	.note.has-content .note-toggle { color: var(--accent-strong); }
+	.note.has-content .note-toggle .dot { background: var(--accent); }
+	.note-body { margin-top: 12px; }
+	.note-body[hidden] { display: none; }
+	.note textarea {
+		width: 100%;
+		min-height: 84px;
+		resize: vertical;
+		font-family: var(--font-sans);
+		font-size: 15.5px;
+		line-height: 1.6;
+		color: var(--ink);
+		background: var(--paper);
+		border: 1px solid var(--hair-strong);
+		border-radius: var(--r-sm);
+		padding: 12px 14px;
+	}
+	.note textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+	.note .saved-hint {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--ink-3);
+		margin-top: 6px;
+		height: 1.2em;
+		opacity: 0;
+		transition: opacity 160ms ease;
+	}
+	.note .saved-hint.show { opacity: 1; }
+
+	/* Section-level notes get a faint accent ground to distinguish from per-item. */
+	.note.section-note {
+		background: var(--accent-soft);
+		border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+		border-radius: var(--r);
+		border-top: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+		padding: 16px 20px;
+		margin-top: 28px;
+	}
+	.note.section-note .note-toggle { color: var(--accent-strong); }
+
+	footer {
+		margin-top: 72px;
+		padding-top: 24px;
+		border-top: 1px solid var(--hair);
+		font-family: var(--font-mono);
+		font-size: 12.5px;
+		color: var(--ink-3);
+		line-height: 1.7;
+	}
+
+	/* Toast for copy confirmation */
+	.toast {
+		position: fixed;
+		bottom: 28px;
+		left: 50%;
+		transform: translateX(-50%) translateY(20px);
+		background: var(--slide);
+		color: var(--slide-ink);
+		font-family: var(--font-sans);
+		font-size: 14.5px;
+		padding: 12px 22px;
+		border-radius: 10px;
+		box-shadow: 0 16px 40px -18px rgba(43,41,36,0.7);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 200ms ease, transform 200ms ease;
+		z-index: 60;
+	}
+	.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+	@media (max-width: 600px) {
+		body { font-size: 17px; }
+		.toolbar { flex-wrap: wrap; }
+		.toolbar .brand { width: 100%; margin-bottom: 4px; }
+	}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+	<span class="brand">CONTEXT OVERHAUL <b>v1</b> · Ripe Skills &amp; Global Context</span>
+	<span class="note-count" id="noteCount"><b>0</b> notes</span>
+	<button class="tbtn" id="copyAll" type="button">Copy all notes</button>
+	<button class="tbtn" id="clearAll" type="button">Clear all</button>
+</div>
+
+<main>
+	<header class="masthead">
+		<p class="kicker">2026-07-27 · Post-Claude-5 context rightsizing</p>
+		<h1>The context overhaul — what to cut, what to keep, what's actually broken</h1>
+		<p class="standfirst">
+			An audit of all seven Ripe skills, the doctrine document, and your global Claude Code
+			context against Anthropic's new context-engineering guidance. The headline finding is
+			not that your skills are over-constrained — it's that the <em>same rule is stated three
+			to nine times</em>, and the copies have already drifted into nine outright
+			contradictions. Five of them are graded by your own <code style="font-family:var(--font-mono)">TESTS.md</code>.
+		</p>
+		<div class="meta-row">
+			<span class="tally"><b>20</b> actions · <b>5</b> live defects · <b>9</b> contradictions</span>
+			<a href="https://x.com/trq212/status/2080710971228918066" rel="noopener">Source: Thariq, “The new rules of context engineering for Claude 5 models” ↗</a>
+			<span>Scope <code style="font-family:var(--font-mono)">~/Dev/vdz-skills</code> + <code style="font-family:var(--font-mono)">~/.claude</code></span>
+		</div>
+	</header>
+
+	<!-- ── Table of contents ── -->
+	<nav class="toc" aria-label="Contents">
+		<h2>Actions by phase</h2>
+		<ol>
+			<li><span class="tn">P0</span><a href="#p0">Stop the bleeding — 5 live defects</a></li>
+			<li><span class="tn">P1</span><a href="#p1">One answer per question — 4 contradictions</a></li>
+			<li><span class="tn">P2</span><a href="#p2">Progressive disclosure — 7,375 → 2,160 words</a></li>
+			<li><span class="tn">P3</span><a href="#p3">Rules → judgement</a></li>
+			<li><span class="tn">P4</span><a href="#p4">Examples → references</a></li>
+			<li><span class="tn">P5</span><a href="#p5">Global context — CLAUDE.md + memory</a></li>
+			<li><span class="tn">P6</span><a href="#p6">Verify — re-baseline on Opus 5</a></li>
+		</ol>
+	</nav>
+
+	<!-- ── The source, as received ── -->
+	<div class="slide-wrap">
+		<div class="slide">
+			<p class="slide-kicker">The article, as read</p>
+			<h2>The new rules of context engineering for Claude 5 models</h2>
+			<p class="slide-sub">Thariq · Claude Code @ Anthropic · 2026-07-24</p>
+			<p class="preamble">
+				“We removed over 80% of Claude Code's system prompt for models like Claude Opus 5 and
+				Claude Fable 5 with no measurable loss on our coding evaluations.” The premise: guardrails
+				written for weaker models now actively harm, because the model must reason about
+				conflicting signals before it can act.
+			</p>
+
+			<div class="ask-group">
+				<p class="grp">The six shifts</p>
+				<ul>
+					<li>Give Claude rules → <b>let Claude use judgement</b>. “Write code that reads like the surrounding code.”</li>
+					<li>Give Claude examples → <b>design interfaces</b>. Examples “constrain them to a certain exploration space.”</li>
+					<li>Put it all upfront → <b>use progressive disclosure</b>. “Consider having a tree of files that can be loaded at the right time.”</li>
+					<li>Repeat yourself → <b>simple tool descriptions</b>. One instruction, one home.</li>
+					<li>Memory in CLAUDE.md → <b>auto-memory</b>. Claude now saves what's relevant on its own.</li>
+					<li>Simple specs → <b>rich references</b>. Code, test suites, HTML artifacts, rubrics — not prose about them.</li>
+				</ul>
+			</div>
+
+			<div class="ask-group">
+				<p class="grp">On each surface</p>
+				<ul>
+					<li><b>CLAUDE.md:</b> “briefly describe what your repo is for… spend most of the tokens on gotchas. Avoid stating ‘the obvious’.”</li>
+					<li><b>Skills:</b> “lightweight guides… Avoid making them overconstrained, except in highly important areas.”</li>
+					<li><b>References:</b> “prefer files that are in code… a HTML mockup will generally produce better results than a description.”</li>
+					<li>Anthropic shipped <code>/doctor</code> to rightsize skills and CLAUDE.md automatically.</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+
+	<div class="note section-note" data-note-id="source" data-note-title="On the source article">
+		<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Note on the article</button>
+		<div class="note-body" hidden>
+			<textarea placeholder="Anything you read differently, or want weighted more/less…"></textarea>
+			<div class="saved-hint">saved</div>
+		</div>
+	</div>
+
+	<!-- ── Cross-cutting diagnosis ── -->
+	<section id="cross">
+		<p class="section-head">The diagnosis — before any individual fix</p>
+		<h2 class="block-title">Your problem is not over-constraint. It's duplication that has drifted.</h2>
+		<div class="ticket">
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">The numbers.</span> The seven Ripe skills total <b>28,155 words
+					across 32 files</b>. Of that, <b>7,375 words sit in the seven <code>SKILL.md</code>
+					routers</b> — the layer that loads eagerly the moment a skill triggers. Every one of
+					them is 2–3× the ~500-word budget the new guidance implies. A realistic target is
+					<b>~2,160 words</b>, a 70% cut to the always-loaded layer with no content loss —
+					it moves to on-demand files.
+				</li>
+				<li>
+					<span class="d-lead">The doctrine is orphaned.</span>
+					<code>the-ripe-method.md</code> is 5,958 words, 14 parts, 13 diagrams — and a grep
+					across all seven skill directories returns <b>zero</b> references to it. Nothing can
+					load it partially because nothing loads it at all. Meanwhile the skills re-derive its
+					content from memory, which is exactly how the nine contradictions happened.
+				</li>
+				<li>
+					<span class="d-lead">Repetition is the root cause, not a symptom.</span> “Components
+					don't fetch; listeners hydrate” is stated <b>nine times across six files</b>. Tests
+					live in <code>__tests__/</code> is stated <b>six times across four skills</b>. The
+					no-transient-props rule appears <b>five times</b>. Each restatement is a fork that can
+					drift — and four of them already have. Applying shift #4 (single source of truth)
+					<em>first</em> is what makes shifts #1 and #3 safe to apply at all.
+				</li>
+				<li>
+					<span class="d-lead">Your own instincts were already right.</span>
+					<code>TESTS.md</code> is the strongest artifact in the repo against the new
+					guidance — verbatim trigger prompts, a scoring rubric, pass thresholds, and a
+					failure→structural-fix lookup table. Scenario 6 deliberately probes whether a rule is
+					<q>defended, not just documented</q>. That is the article's thesis, written by you a
+					year early. Don't rewrite it; re-baseline it.
+				</li>
+				<li>
+					<span class="d-lead">Don't hand-edit all of this.</span> Anthropic shipped
+					<code>/doctor</code> specifically to rightsize skills and CLAUDE.md. Run it first on
+					each skill and let it do Phase 2–3 mechanically; reserve your attention for Phase 0
+					and Phase 1, which are judgement calls a tool cannot make.
+				</li>
+			</ul>
+			<div class="note section-note" data-note-id="cross" data-note-title="Diagnosis">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Note on the diagnosis</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Agree / disagree with the framing? Reorder the phases?"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ══════════ PHASE 0 ══════════ -->
+	<section id="p0">
+		<p class="section-head">Phase 0 · ~2 hours · do this before touching anything else</p>
+		<h2 class="block-title">Stop the bleeding — five defects that produce wrong code today</h2>
+
+		<article class="ticket" id="t1">
+			<div class="ticket-head">
+				<span class="badge">P0-1</span>
+				<span class="jira">ripe-init / store-templates.md:101</span>
+				<span class="pill blocked">Live bug</span>
+			</div>
+			<h3>The scaffolder emits code its own audit grades High</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>export const setOnlineStatus = createAction&lt;boolean&gt;('app/setOnlineStatus');</q>
+				<q>STORE-H-BARE-PRIMITIVE-PAYLOAD · Severity H · False positives: None.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Running <code>/ripe-init</code> then <code>/ripe-audit</code> on
+					an untouched scaffold yields an H finding on line 1 of the generated store.</span>
+					Worse, <code>checklists/store.md:52-62</code> names the exact fix as its own example:
+					split into <code>wentOnline</code> / <code>wentOffline</code>.
+				</li>
+				<li>
+					<span class="d-lead">Fix.</span> Replace with two no-payload actions. Five-minute edit;
+					it removes a contradiction between two skills that ship together.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t1" data-note-title="P0-1 scaffold emits H-grade code">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t2">
+			<div class="ticket-head">
+				<span class="badge">P0-2</span>
+				<span class="jira">ripe-init / store-templates.md:11-32</span>
+				<span class="pill blocked">Live bug</span>
+			</div>
+			<h3>The scaffold doesn't compile once you add your first branch</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>building-ripe-store instructs: import type { Listener } from '@/store/types' and append to const listeners: Listener[][] in store/listener.ts</q>
+				<q>ripe-init's types.ts contains only LOADING_STATES — no Listener interface. Its listener.ts is two lines with no listeners array.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">The two skills disagree about what the scaffold contains.</span>
+					The first branch a developer adds hits <em>“module has no exported member
+					<code>Listener</code>”</em>. This is the most likely first experience of a new Ripe project.
+				</li>
+				<li>
+					<span class="d-lead">Fix.</span> Add the <code>Listener</code> interface to the
+					scaffolded <code>types.ts</code> and an empty <code>listeners: Listener[][]</code>
+					array to <code>listener.ts</code>. Then make <code>building-ripe-store</code> point at
+					those files rather than restating their shape.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t2" data-note-title="P0-2 scaffold doesn't compile">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t3">
+			<div class="ticket-head">
+				<span class="badge">P0-3</span>
+				<span class="jira">ripe-audit / checklists/tests.md</span>
+				<span class="pill blocked">Live bug</span>
+			</div>
+			<h3>Eight audit checks have never run</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>checklists/tests.md (744 words) is not in SKILL.md's Files table and not in runner.md's ordered checklist run, which lists store → components → routing → clean-code → organisation.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">The file is orphaned.</span> It is referenced only from
+					<code>ripe-skills/README.md</code>. Every audit you have run silently skipped all
+					eight test-quality checks — and reported clean.
+				</li>
+				<li>
+					<span class="d-lead">Fix.</span> Two lines: add it to the Files table and to the
+					runner's ordered list. Then re-run the audit on a real project and expect new findings.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t3" data-note-title="P0-3 orphaned checklist">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t4">
+			<div class="ticket-head">
+				<span class="badge">P0-4</span>
+				<span class="jira">routing/setup.md:106 ↔ store/listeners.md:174</span>
+				<span class="pill blocked">Live bug</span>
+			</div>
+			<h3>Two skills define incompatible <code>setLocation</code> payloads</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>routing: dispatch(setLocation({ location })) — “the full Location object (not just pathname)”</q>
+				<q>store: dispatch(setLocation({ location: location.pathname })) — a string</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">This is a correctness bug in the guidance, not a style
+					disagreement.</span> It has already propagated downstream: routing matches
+					<code>matchPath(…, action.payload.location.pathname)</code>, store matches
+					<code>matchPath(…, action.payload.location)</code>. Whichever skill loads
+					second wins, nondeterministically.
+				</li>
+				<li>
+					<span class="d-lead">Fix.</span> Adopt the full-<code>Location</code> version — it is
+					strictly more capable (search and hash are needed for real hydration). Then delete the
+					store's copy and replace it with a link. This is the template for all of Phase 1.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t4" data-note-title="P0-4 setLocation payload contract">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t5">
+			<div class="ticket-head">
+				<span class="badge">P0-5</span>
+				<span class="jira">building-ripe-tests · checklists/store.md:86</span>
+				<span class="pill blocked">Live bug</span>
+			</div>
+			<h3>Nine references point at things no one else can open</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>Eight “Worked Examples in the Wild” pointers target mce-demo-portal, which does not exist anywhere under ~/Dev.</q>
+				<q>The rule source for STORE-M-PATCH-STATE-MACHINE is file:///Users/yehuda.g/Dev/mce-demo-portal/docs/handoffs/…</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">The instinct was exactly right</span> — point at real code rather
+					than describe it. That is shift #6. But the targets are unresolvable, so the skill paid
+					twice: 2,793 words of prose describing what a Ripe test looks like <em>plus</em>
+					pointers that open nothing.
+				</li>
+				<li>
+					<span class="d-lead">Fix.</span> Vendor one real test file per category into
+					<code>building-ripe-tests/examples/</code> and cite those. Replace the
+					<code>file://</code> rule source with the rule text inline. Covered further in P4-3.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t5" data-note-title="P0-5 dead references">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+	</section>
+
+	<!-- ══════════ PHASE 1 ══════════ -->
+	<section id="p1">
+		<p class="section-head">Phase 1 · ~3 hours · pick a side, delete the loser, leave a link</p>
+		<h2 class="block-title">One answer per question</h2>
+
+		<article class="ticket" id="t6">
+			<div class="ticket-head">
+				<span class="badge">P1-1</span>
+				<span class="jira">doctrine ↔ state-shape.md</span>
+				<span class="pill blocked">Graded by TESTS.md</span>
+			</div>
+			<h3>Derived data: cache on mutation, or compute in a selector?</h3>
+			<div class="ask">
+				<span class="ask-label">Four statements, two answers</span>
+				<q>Doctrine, Part VII rule 4: “Caching computed on mutation. Not on read.”</q>
+				<q>Doctrine, Part VII anti-patterns, 60 lines later: “❌ Don't store computed values in state … ✅ Compute in a selector instead.”</q>
+				<q>state-shape.md:116: “don't compute the projection at render time or in a selector — compute it in the reducer at mutation time.”</q>
+				<q>state-shape.md:190: “In selectors: computed values, derived data, filtered/sorted views.”</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Both files contradict themselves internally, then each other.</span>
+					This is the most damaging contradiction in the set because it's a decision an agent
+					faces on nearly every list feature — and <code>TESTS.md</code> scenario 3 grades on it
+					explicitly.
+				</li>
+				<li>
+					<span class="d-lead">Recommended resolution.</span> Keep the <code>filteredItems</code>
+					cache-on-mutation rule as the Ripe position — it is the distinctive, non-inferable
+					opinion, and selector-computation is what every other Redux codebase already does.
+					Then delete the two selector-side statements outright rather than hedging them, and
+					state the boundary once: <em>projections a view renders are cached on mutation;
+					scalar aggregates stay in selectors.</em>
+				</li>
+			</ul>
+			<div class="note" data-note-id="t6" data-note-title="P1-1 filteredItems vs selector">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea placeholder="This one is a genuine design call — your ruling?"></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t7">
+			<div class="ticket-head">
+				<span class="badge">P1-2</span>
+				<span class="jira">doctrine ↔ store/SKILL.md ↔ creating-a-branch.md</span>
+			</div>
+			<h3>May a reducer contain an <code>if</code>?</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>Doctrine, three places incl. the pre-commit checklist: “No if statements. No transformations. No API calls.”</q>
+				<q>store/SKILL.md rule 2: reducers MAY “maintain collection invariants … use a small if for those invariants.”</q>
+				<q>creating-a-branch.md:127 and :344, plus SKILL.md:142: “Reducer has no if statements.”</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">The skill's refined rule is the correct one</span> and it even
+					supplies the discriminator: <em>a guard protecting a data invariant → reducer; a guard
+					gating a business outcome → listener.</em> That sentence is the single best piece of
+					judgement scaffolding in the whole skill set.
+				</li>
+				<li>
+					<span class="d-lead">Fix.</span> Three stale copies inside the store skill itself
+					(<code>creating-a-branch.md:127</code>, <code>:344</code>, <code>SKILL.md:142</code>)
+					are pre-refinement leftovers — delete them. Then update the doctrine's three
+					statements to the discriminator form.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t7" data-note-title="P1-2 reducer if">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t8">
+			<div class="ticket-head">
+				<span class="badge">P1-3</span>
+				<span class="jira">doctrine · routing · ripe-init</span>
+				<span class="pill shipped">Mechanical</span>
+			</div>
+			<h3><code>router/</code> or <code>routes/</code>? Three answers, and the scaffolder picks the wrong one</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>Doctrine Part IX: “routes/  # Routing config (if file-based)”</q>
+				<q>building-ripe-routing: “All routing config lives in src/router/”</q>
+				<q>ripe-init/claude-md-template.md: “routes/ ├── router.ts ├── routes.tsx”</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead"><code>ripe-init</code> generates a CLAUDE.md documenting a folder
+					that <code>building-ripe-routing</code> refuses to use.</span> Every later agent on that
+					project is misdirected by the project's own memory file.
+				</li>
+				<li>
+					<span class="d-lead">Fix.</span> Standardise on <code>src/router/</code> (the skill that
+					actually writes routing code wins). Update the doctrine and the CLAUDE.md template.
+					This directly serves the doctrine's own headline claim — <q>When you've seen one Ripe
+					project, you can navigate any Ripe project. Blindfolded. At 2am.</q>
+				</li>
+			</ul>
+			<div class="note" data-note-id="t8" data-note-title="P1-3 router vs routes">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t9">
+			<div class="ticket-head">
+				<span class="badge">P1-4</span>
+				<span class="jira">doctrine ↔ store skill</span>
+				<span class="pill shipped">Mechanical</span>
+			</div>
+			<h3>Two more naming splits that silently break every grep</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>Doctrine says .listeners.ts (plural) in four places; the skill says .listener.ts (singular) in four places.</q>
+				<q>Doctrine: LoadingStates.SUCCESS. Skill: LOADING_STATES.loaded. Different casing, different object name — and a different value.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Any audit rule, glob, or grep keyed on these misses half the
+					codebase.</span> And <code>TESTS.md</code> grades on <q>LOADING_STATES.* used, no bare
+					status strings</q> — a model given the doctrine fails that criterion, because the
+					doctrine's own state example uses the bare string union the skill forbids.
+				</li>
+				<li>
+					<span class="d-lead">Fix.</span> Adopt the skill's forms (<code>.listener.ts</code>,
+					<code>LOADING_STATES.loaded</code>) since the audit greps already assume them.
+					Sweep the doctrine. Pure find-and-replace, ~20 minutes.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t9" data-note-title="P1-4 naming splits">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+	</section>
+
+	<!-- ══════════ PHASE 2 ══════════ -->
+	<section id="p2">
+		<p class="section-head">Phase 2 · ~5 hours · the big structural win</p>
+		<h2 class="block-title">Progressive disclosure — cut the always-loaded layer by 70%</h2>
+
+		<article class="ticket" id="t10">
+			<div class="ticket-head">
+				<span class="badge">P2-1</span>
+				<span class="jira">ripe-architecture-docs/the-ripe-method.md</span>
+			</div>
+			<h3>Split the doctrine, and give it its first inbound link</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>1,315 lines · 14 parts · 13 diagrams · zero references from any skill. No table of contents, no anchors. Two sections are both numbered Part XII; Part XIII does not exist.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Lines 1276–1310 are already the perfect entry point</span> — the
+					Cheat Sheet (12 rows) plus Quick Checks Before Committing (9 boxes), about 35 lines.
+					<b>Promote that to <code>cheat-sheet.md</code></b> and make it the one part a skill
+					loads by default.
+				</li>
+				<li>
+					<span class="d-lead">Then split the rest at Part boundaries</span> into roughly ten
+					files: <code>why</code>, <code>principles</code>, <code>data-flow</code>,
+					<code>state</code>, <code>file-structure</code>, <code>view</code>,
+					<code>listeners</code>, <code>anti-patterns</code>, <code>code-style</code>. The Parts
+					already divide cleanly; no rewriting required.
+				</li>
+				<li>
+					<span class="d-lead">Then invert the relationship.</span> Today the skills re-derive
+					the doctrine. After the split they should <em>link into it</em> — which is what stops
+					the drift permanently. The one line in <code>building-ripe-store/SKILL.md:98</code>
+					that already points outward at <code>../ripe-init/store-templates.md</code> is the
+					model to copy everywhere.
+				</li>
+				<li>
+					<span class="d-lead">Fix the numbering</span> (two Part XIIs, missing XIII) before
+					splitting, since Part number becomes the anchor.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t10" data-note-title="P2-1 split the doctrine">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t11">
+			<div class="ticket-head">
+				<span class="badge">P2-2</span>
+				<span class="jira">all seven SKILL.md files</span>
+			</div>
+			<h3>Turn seven reference documents back into seven routers</h3>
+			<div class="ask">
+				<span class="ask-label">Current vs. target, words in SKILL.md</span>
+				<q>store 1,167 → ~350 · components 1,513 → ~300 · routing 1,005 → ~300 · tests 1,108 → ~350 · audit 780 → ~400 · init 426 → ~120 · overview 1,376 → ~340</q>
+				<q>components/SKILL.md has more content than both files it routes to, combined. Its two pointer lines appear at line 311 of 314.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">The biggest single extraction:</span>
+					<code>routing/SKILL.md:8-63</code> is a 600-word design essay (“Routes Are Feature
+					Affordances”) that routes nowhere. It's the skill's best content and it taxes every
+					invocation. Move it to <code>route-design.md</code>.
+				</li>
+				<li>
+					<span class="d-lead">Second:</span> <code>ripe-overview/SKILL.md</code> carries a
+					480-word output schema that the HTML template already encodes as a placeholder
+					manifest — and the two copies have drifted (the prose says “7 blocks”, then defines
+					eight; the Signals table's block column is wrong in all 12 rows).
+				</li>
+				<li>
+					<span class="d-lead">Promote what's buried.</span> <code>creating-a-branch.md:20-34</code>
+					— “Step 0: State Composition is a Human Decision… get explicit approval” — is the
+					highest-value paragraph in the store skill and is currently invisible to a model that
+					only loads SKILL.md. That belongs in the router; the file trees and type dumps do not.
+				</li>
+				<li>
+					<span class="d-lead">Delete the checklists.</span> Every skill ends with a Workflow
+					Checklist that restates rules already stated in its own body. Store has <em>three</em>
+					lists of the same ritual. They are the purest form of shift-#4 violation.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t11" data-note-title="P2-2 rightsize the routers">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t12">
+			<div class="ticket-head">
+				<span class="badge">P2-3</span>
+				<span class="jira">store · routing · tests</span>
+				<span class="pill shipped">Mechanical</span>
+			</div>
+			<h3>Three navigation tables per skill, pointing at the same three files</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>routing: Common Tasks (L87–95), What Belongs Where (L99–108), References (L127–132).</q>
+				<q>store: a Common Tasks table at :58-67 and a second, more verbose References table at :150-159.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Collapse to one table per skill.</span> A router needs exactly one
+					task→file map. Also trim the frontmatter descriptions: most end with a
+					“Covers A, B, C…” clause that duplicates the table and buys nothing at trigger time.
+				</li>
+				<li>
+					<span class="d-lead">While you're there, fix the triggers.</span> Add
+					<code>/ripe-audit</code> and <code>/ripe-init</code> to their descriptions (only
+					<code>ripe-overview</code> lists its slash command). Add natural-language triggers to
+					<code>ripe-init</code> — today every trigger is a paraphrase of the skill's own name.
+					<code>building-ripe-tests</code>' description is the model: it names its boundary
+					against the <code>tdd</code> skill explicitly.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t12" data-note-title="P2-3 duplicate nav tables">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+	</section>
+
+	<!-- ══════════ PHASE 3 ══════════ -->
+	<section id="p3">
+		<p class="section-head">Phase 3 · ~2 hours · the article's headline shift, applied last on purpose</p>
+		<h2 class="block-title">Rules → judgement</h2>
+
+		<article class="ticket" id="t13">
+			<div class="ticket-head">
+				<span class="badge">P3-1</span>
+				<span class="jira">store · components · tests</span>
+			</div>
+			<h3>Six “cardinal rules”, of which three are actually invariants</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>“These are non-negotiable. Every other section in this skill assumes them.” — store/SKILL.md:10 and tests/SKILL.md:10, verbatim in both.</q>
+				<q>Genuine: payload interfaces · reducer scope · complete defaults (no undefined) · never hand-roll a store in a test.</q>
+				<q>Obsolete guardrails: “never const Component: React.FC” · “tabs, matching the ESLint rule” · “never one without the other” (items + byId) · “never ids/filteredIds”.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Blanket “non-negotiable” over a mixed list devalues the rules that
+					matter.</span> Soften the style preferences to “match the surrounding code” — the exact
+					phrasing Anthropic replaced their own comment rule with — and keep the hard line only
+					where violation is destructive or breaks an invariant.
+				</li>
+				<li>
+					<span class="d-lead">Delete anything a lint rule or the filesystem already
+					enforces:</span> tab indentation, the <code>@</code> alias, the
+					<code>__tests__/</code> convention, file-tree diagrams. That's shift #5 — don't restate
+					what Claude learns by looking.
+				</li>
+				<li>
+					<span class="d-lead">The model to imitate is already in your repo.</span>
+					<code>hydration.md:89</code>: <q>Default to guard always; only skip if you can
+					articulate why repetition is safe.</q> It states the invariant, names the escape hatch,
+					and demands justification. Rewrite the softenable rules in that voice.
+				</li>
+				<li>
+					<span class="d-lead">Resolve two self-contradictions while softening:</span>
+					components says “semantic styled components ONLY — no raw HTML tags” then requires
+					<code>&lt;span&gt;</code>/<code>&lt;div&gt;</code> for decorative elements;
+					listeners says “Always handle errors” then shows two approved silent-catch patterns.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t13" data-note-title="P3-1 cardinal rules">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t14">
+			<div class="ticket-head">
+				<span class="badge">P3-2</span>
+				<span class="jira">ripe-audit / checklists/*</span>
+			</div>
+			<h3>The audit forbids the judgement it exists to exercise</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>“False positives: None.” — appears six times across the checklists.</q>
+				<q>“Atomic primitives in a shared library MAY use transient props — but the project has no such library yet.” — a fact about your repo, frozen into a distributable skill.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">“No false positives” is a promise no static grep can keep</span>,
+					and it instructs the model not to think. Replace with the shape the grading file already
+					uses well: the <code>(Skip)</code> protocol plus the CLAUDE.md “Ripe deviations” escape
+					hatch, which is the best content in that skill.
+				</li>
+				<li>
+					<span class="d-lead">Strip project-state assumptions.</span> Three checklist entries
+					assert facts about <em>your</em> repo as of a past date. They're wrong the moment the
+					skill runs anywhere else. Also: “Don't apply fixes” is stated in five separate places.
+				</li>
+				<li>
+					<span class="d-lead">One grep is broken.</span>
+					<code>CLEAN-L-DEAD-ACTION</code> runs
+					<code>rg -n 'dispatch\(actionName\('</code> — it greps for the literal placeholder
+					string <code>actionName</code>, so it can never match.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t14" data-note-title="P3-2 audit absolutes">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+	</section>
+
+	<!-- ══════════ PHASE 4 ══════════ -->
+	<section id="p4">
+		<p class="section-head">Phase 4 · ~4 hours · trade prose for artifacts</p>
+		<h2 class="block-title">Examples → references</h2>
+
+		<article class="ticket" id="t15">
+			<div class="ticket-head">
+				<span class="badge">P4-1</span>
+				<span class="jira">store · components · tests</span>
+			</div>
+			<h3>Delete ~440 lines that restate React, RTK, Vitest and RTL documentation</h3>
+			<div class="ask">
+				<span class="ask-label">The inventory</span>
+				<q>listeners.md: ~140 lines of isAnyOf / getState() / Promise.all / generic try-catch — verbatim RTK listenerMiddleware docs.</q>
+				<q>patterns.md: ~150 lines of early-exit, conditional rendering, .map with key, inline handlers — React 101.</q>
+				<q>reducer-tests.md: the three “idioms” are (1) call a reducer with undefined, (2) call it with an action, (3) call it twice. The whole 572-word file compresses to ~8 lines.</q>
+				<q>component-tests.md:143-168 reproduces the RTL query-priority ladder from the RTL docs.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Keep the examples that carry non-inferable opinion.</span> Named
+					survivors: the two-listener intent chain; concurrent-action guards; optimistic rollback
+					with the <code>getOriginalState()</code>-before-<code>await</code> note; the
+					cross-branch listener placement rule; <q>Pass the Minimum</q>
+					(<code>demo={demo}</code> → <code>shorthand={shorthand}</code>); the return-as-content-document
+					contrast; the two-level alias pattern; the jsdom <code>&lt;select&gt;</code>
+					finickiness; and <code>ripe-overview</code>'s wrong-vs-right voice sample — the one
+					place where a worked example genuinely can't be replaced by an interface, because
+					voice cannot be specified declaratively.
+				</li>
+				<li>
+					<span class="d-lead">Replace transcribed artifacts with pointers.</span>
+					<code>styled.md</code> transcribes the whole <code>theme.css</code> token set including
+					hex values — point at <code>@/assets/styles/theme.css</code> instead. Same for the
+					<code>Listener</code> interface (<code>store/types.ts</code>) and the tab-indent rule
+					(<code>.eslintrc</code>). Transcribed copies drift; files don't.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t15" data-note-title="P4-1 delete doc-restatement">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t16">
+			<div class="ticket-head">
+				<span class="badge">P4-2</span>
+				<span class="jira">ripe-init</span>
+			</div>
+			<h3>Make <code>ripe-init</code> a template directory instead of prose about files</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>All 25 scaffolded files exist only as fenced code blocks inside four markdown documents. There is no templates/ directory.</q>
+				<q>claude-md-template.md opens a ```markdown fence containing ```typescript and ```bash fences — the model must un-nest it by hand.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">This is shift #6 in its purest form.</span> A real
+					<code>templates/</code> tree with <code>PROJECT_NAME</code> as the sole placeholder
+					makes the scaffold <em>type-checkable</em> — <code>tsc --noEmit</code> in CI would have
+					caught P0-1 and P0-2 before they shipped. Markdown fences catch nothing.
+				</li>
+				<li>
+					<span class="d-lead">It also deletes most of the skill.</span> The 25-row checklist
+					exists only because the file list isn't discoverable from the filesystem; with a real
+					tree it collapses to a copy plus one substitution pass. SKILL.md goes 426 → ~120 words.
+				</li>
+				<li>
+					<span class="d-lead">And it fixes the divergence with the other skills.</span> Five
+					router/App files exist in both <code>ripe-init</code> and
+					<code>building-ripe-routing</code> and have already drifted in four ways — including an
+					exhaustive-deps lint error in one copy and <code>interface</code> vs <code>type</code>
+					in another. Real files give the other skills something to cite.
+				</li>
+				<li>
+					<span class="d-lead">Two more scaffold bugs to fix in passing:</span> the generated
+					CLAUDE.md promises Vitest and jsdom that <code>package.json</code> never installs, and
+					imports a <code>@/components/Primitives</code> barrel the scaffold never creates.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t16" data-note-title="P4-2 templates directory">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t17">
+			<div class="ticket-head">
+				<span class="badge">P4-3</span>
+				<span class="jira">ripe-audit · ripe-overview · html-report</span>
+			</div>
+			<h3>Two hand-rolled report templates, and the audit loses reviewer comments on reload</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>The audit's script never touches localStorage. Its stated workflow: “They open it, comment per-finding, hit Copy all comments, paste back.”</q>
+				<q>Both Ripe templates re-implement the same tokens — the rust accent is the identical hex #b8531f in both — and five of the six interactions already exist as hardened snippets in html-report/reference/tooling.md.</q>
+				<q>ripe-audit/SKILL.md explicitly declines to share: “The audit's bespoke format is the better fit here; the cross-reference is just so the two stay aware of each other.”</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">The refusal to consolidate cost you two real bugs.</span>
+					A reviewer who reloads mid-review loses every comment. And
+					<code>ripe-overview</code>'s bare <code>localStorage</code> calls throw — rendering the
+					report unthemed — under Safari private mode or a strict <code>file://</code> context.
+					Both are already solved in <code>tooling.md</code>.
+				</li>
+				<li>
+					<span class="d-lead">Split content model from chrome.</span> The audit's H/M/L severity,
+					per-finding rule citation, OK section and Skip appendix are genuinely bespoke — keep
+					them. The tokens, cards, notes, copy-to-markdown, counter, toast and persistence are
+					<code>Ledger</code> with different variable names. Extract one shared
+					<code>report-chrome/</code> reference; net deletion ~200 lines plus both bugs.
+				</li>
+				<li>
+					<span class="d-lead">Also delete the radar.</span> <code>ripe-overview</code> documents
+					a “simplicity radar” in three places, <code>writing-style.md</code> spends ~110 words on
+					how to narrate it, and the template contains no radar at all — SKILL.md itself says the
+					dimensions are <q>computed but not displayed</q>.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t17" data-note-title="P4-3 shared report chrome">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+	</section>
+
+	<!-- ══════════ PHASE 5 ══════════ -->
+	<section id="p5">
+		<p class="section-head">Phase 5 · ~1 hour · the cheapest wins in the whole plan</p>
+		<h2 class="block-title">Global context — CLAUDE.md and memory</h2>
+
+		<article class="ticket" id="t18">
+			<div class="ticket-head">
+				<span class="badge">P5-1</span>
+				<span class="jira">~/.claude/CLAUDE.md</span>
+				<span class="pill shipped">Three edits only</span>
+			</div>
+			<h3>Your CLAUDE.md is already close to the new target — leave most of it alone</h3>
+			<div class="ask">
+				<span class="ask-label">Verdict</span>
+				<q>230 words, 10 bullets, zero repo facts, nothing stale. Seven of ten bullets survive unchanged.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Keep the override clause verbatim.</span>
+					<q>Override when: I ask for an explanation or write-up… a destructive action is ahead…
+					three turns of “still broken”…</q> — this is the best-shaped instruction in your entire
+					context. It hands back judgement with named trigger conditions, which is precisely what
+					the article asks for.
+				</li>
+				<li>
+					<span class="d-lead">Edit 1 — the list cap conflicts with three other things.</span>
+					<q>Lists cap at ~5</q> fights bullet 2 (“number multi-step work” — an 8-step migration is
+					8 steps), fights the override clause, and fights your own artifacts. It's a proxy for
+					the real want. Rewrite as intent: <em>“Don't pad lists — if it's genuinely long, split
+					now vs. later.”</em>
+				</li>
+				<li>
+					<span class="d-lead">Edit 2 — decouple from the <code>quick-recap</code> skill.</span>
+					Bullet 4 hard-wires that skill's output contract into always-on global context. If the
+					skill is revised or removed, CLAUDE.md silently references a format that no longer
+					exists. Let the skill own its own block.
+				</li>
+				<li>
+					<span class="d-lead">Edit 3 — soften “every turn” / “Never”.</span> On a twelve-turn
+					debugging loop, restating state every turn becomes ritual that fights your own
+					“no preamble” bullet.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t18" data-note-title="P5-1 CLAUDE.md">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+
+		<article class="ticket" id="t19">
+			<div class="ticket-head">
+				<span class="badge">P5-2</span>
+				<span class="jira">~/.claude/projects/…/memory/ — 20 files</span>
+			</div>
+			<h3>Memory: 8 keep, 2 delete, 9 fold, 1 watch</h3>
+			<div class="ask">
+				<span class="ask-label">The two deletions</span>
+				<q>user_thursday_leave.md — “Must leave office by 16:30 on Thursday, 2026-06-25.” That is 32 days expired and has been in always-loaded context the whole time.</q>
+				<q>project_weekly_priorities.md — “Week of Jun 25–Jul 1”, four weeks stale, and it carries a directive, not just a fact: “Deprioritize everything else.” A stale instruction is worse than a stale fact.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Roughly 60% of the directory is response-formatting preference,
+					not durable fact.</span> <code>feedback_be_directive</code>,
+					<code>feedback_proactive_overdeliver</code> and CLAUDE.md bullet 4 are three statements
+					of one rule across two always-loaded systems. Fold the formatting ones into CLAUDE.md;
+					fold <code>feedback_design_writeups</code> into the <code>html-report</code> skill and
+					<code>feedback_design_style</code> into the design skills — both files already point at
+					those skills themselves.
+				</li>
+				<li>
+					<span class="d-lead">The keepers are the ones recording <em>decisions</em>, not
+					facts.</span> <code>project_browser_automation</code> is the best-written memory you
+					have: it records that the Playwright plugin is disabled <em>on purpose</em>. Without
+					that, a future session re-enables it. Same shape as
+					<code>project_better_skills_trial</code> — though that one is a trial started
+					2026-07-19 and now needs a verdict, not indefinite residency.
+				</li>
+				<li>
+					<span class="d-lead">Shrink the survivors.</span> Twelve files carry a boilerplate
+					<b>Why</b> + <b>How to apply</b> scaffold. For a one-line rule like the PR-naming or
+					ticket-descriptor convention that's 3–5× the token cost of the fact itself.
+				</li>
+				<li>
+					<span class="d-lead">Fix the wikilinks.</span> Frontmatter uses hyphens
+					(<code>feedback-be-directive</code>), filenames use underscores, and links appear in
+					both forms. Some don't resolve. Also: <code>project_dispatch_onboarding</code> is 19%
+					of the whole directory and is largely a six-week-old status snapshot — move it to the
+					vault as a decision log.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t19" data-note-title="P5-2 memory cleanup">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+	</section>
+
+	<!-- ══════════ PHASE 6 ══════════ -->
+	<section id="p6">
+		<p class="section-head">Phase 6 · ~2 hours · prove the cut didn't cost anything</p>
+		<h2 class="block-title">Verify</h2>
+
+		<article class="ticket" id="t20">
+			<div class="ticket-head">
+				<span class="badge">P6-1</span>
+				<span class="jira">TESTS.md · README.md · /doctor</span>
+			</div>
+			<h3>Re-baseline on Opus 5, then close the loop</h3>
+			<div class="ask">
+				<span class="ask-label">Evidence</span>
+				<q>TESTS.md: “Opus 4.7 is the primary target.” Every rubric score in that file was measured against a model generation no longer in use — and the file's own thesis is that scores are model-specific.</q>
+				<q>README.md advertises a four-way teaching trial (teaching · teach-me · teach-me-deeply · explain-it-back). Two of those directories don't exist; git shows the trial concluded. Meanwhile drive-browser and find-a-gif exist and aren't listed.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Capture a baseline before you cut, not after.</span> Run the
+					existing <code>TESTS.md</code> scenarios against Opus 5 on the current skills <em>first</em>,
+					so the post-overhaul run is a comparison rather than a hope. Anthropic's claim is
+					“no measurable loss” — you can actually measure it, because you already built the rubric.
+				</li>
+				<li>
+					<span class="d-lead">Run <code>/doctor</code> per skill.</span> It exists specifically to
+					rightsize skills and CLAUDE.md files. Use it to do Phase 2 and 3 mechanically. Note it
+					needs an interactive terminal — it won't run from this session.
+				</li>
+				<li>
+					<span class="d-lead">Close the test-coverage gap.</span> Two of ten-plus skills have test
+					plans; <code>building-ripe-components</code> is untested despite being the largest
+					offender in this audit. And add the one test the whole set is missing: that arriving at
+					the same URL twice doesn't clobber a draft — the exact bug the routing skill's hardest
+					rule exists to prevent, with <code>loc()</code> already in the harness for it.
+				</li>
+				<li>
+					<span class="d-lead">Fix the README in both directions</span> — it lists skills that were
+					deleted and omits skills that were added.
+				</li>
+			</ul>
+			<div class="note" data-note-id="t20" data-note-title="P6-1 verify">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden><textarea></textarea><div class="saved-hint">saved</div></div>
+			</div>
+		</article>
+	</section>
+
+	<!-- ── Sequencing ── -->
+	<section id="seq">
+		<p class="section-head">Sequencing — why this order</p>
+		<h2 class="block-title">Roughly 19 hours, and the first two hours matter most</h2>
+		<div class="ticket">
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Phase 0 before everything.</span> Five defects are producing wrong
+					code right now. They're also small — about two hours total — and none of them depend on
+					any restructuring decision.
+				</li>
+				<li>
+					<span class="d-lead">Phase 1 before Phase 2.</span> You cannot safely delete a duplicate
+					until you've decided which copy is right. Resolving the nine contradictions first turns
+					Phase 2 from a judgement exercise into a mechanical one.
+				</li>
+				<li>
+					<span class="d-lead">Phase 3 last among the content phases, deliberately.</span> Softening
+					rules while nine of them still exist in triplicate would just produce nine softened
+					copies. Deduplicate, then soften the survivor.
+				</li>
+				<li>
+					<span class="d-lead">A realistic shape:</span> Phase 0 + 1 in one evening (~5h, and it's
+					the highest-value block by a wide margin). Phases 2 and 4 are the bulk (~9h) and are good
+					candidates for parallel subagents, one per skill. Phases 3, 5 and 6 are ~5h of cleanup and
+					measurement.
+				</li>
+				<li>
+					<span class="d-lead">What not to do:</span> don't rewrite <code>TESTS.md</code>, don't
+					touch the override clause in CLAUDE.md, and don't cut the examples listed as survivors in
+					P4-1. Those are the parts already doing what the article asks.
+				</li>
+			</ul>
+			<div class="note section-note" data-note-id="seq" data-note-title="Sequencing">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Note on sequencing</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Reorder? Cut a phase? Which do you want me to start on?"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<footer>
+		<p>
+			Context overhaul plan · generated 2026-07-27 · audit covered 7 Ripe skills (32 files,
+			28,155 words), the 5,958-word doctrine, <code>~/.claude/CLAUDE.md</code>, and 20 memory files.
+			Source: Thariq, “The new rules of context engineering for Claude 5 models”, 2026-07-24.
+		</p>
+		<p>
+			Notes you type here are saved in this browser's localStorage only — nothing is uploaded.
+			Use “Copy all notes” to export them as Markdown.
+		</p>
+	</footer>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+	"use strict";
+	var STORE_PREFIX = "ripe-context-overhaul:";
+	var notes = Array.prototype.slice.call(document.querySelectorAll(".note"));
+
+	function keyFor(id) { return STORE_PREFIX + id; }
+
+	function showToast(message) {
+		var el = document.getElementById("toast");
+		el.textContent = message;
+		el.classList.add("show");
+		window.clearTimeout(showToast._t);
+		showToast._t = window.setTimeout(function () { el.classList.remove("show"); }, 2200);
+	}
+
+	function refreshCount() {
+		var filled = notes.filter(function (n) {
+			var ta = n.querySelector("textarea");
+			return ta && ta.value.trim().length > 0;
+		}).length;
+		var counter = document.getElementById("noteCount");
+		counter.innerHTML = "<b>" + filled + "</b> note" + (filled === 1 ? "" : "s");
+	}
+
+	function wireNote(note) {
+		var id = note.getAttribute("data-note-id");
+		var toggle = note.querySelector(".note-toggle");
+		var body = note.querySelector(".note-body");
+		var textarea = note.querySelector("textarea");
+		var hint = note.querySelector(".saved-hint");
+		if (!id || !toggle || !body || !textarea) return;
+
+		// Restore saved value.
+		var saved = "";
+		try { saved = window.localStorage.getItem(keyFor(id)) || ""; } catch (e) { saved = ""; }
+		textarea.value = saved;
+		var hasContent = saved.trim().length > 0;
+		note.classList.toggle("has-content", hasContent);
+		// Auto-open if a note already exists.
+		if (hasContent) {
+			body.hidden = false;
+			toggle.setAttribute("aria-expanded", "true");
+		}
+
+		toggle.addEventListener("click", function () {
+			var open = body.hidden;
+			body.hidden = !open;
+			toggle.setAttribute("aria-expanded", open ? "true" : "false");
+			if (open) { textarea.focus(); }
+		});
+
+		var saveTimer = null;
+		textarea.addEventListener("input", function () {
+			var val = textarea.value;
+			note.classList.toggle("has-content", val.trim().length > 0);
+			refreshCount();
+			window.clearTimeout(saveTimer);
+			saveTimer = window.setTimeout(function () {
+				try {
+					if (val.trim().length > 0) {
+						window.localStorage.setItem(keyFor(id), val);
+					} else {
+						window.localStorage.removeItem(keyFor(id));
+					}
+					if (hint) {
+						hint.classList.add("show");
+						window.setTimeout(function () { hint.classList.remove("show"); }, 1100);
+					}
+				} catch (e) { /* storage unavailable — notes stay in-memory only */ }
+			}, 350);
+		});
+	}
+
+	notes.forEach(wireNote);
+	refreshCount();
+
+	// ── Copy all notes ──
+	document.getElementById("copyAll").addEventListener("click", function () {
+		var lines = ["# Report Notes", ""];
+		var any = false;
+		notes.forEach(function (n) {
+			var ta = n.querySelector("textarea");
+			if (!ta || ta.value.trim().length === 0) return;
+			any = true;
+			var title = n.getAttribute("data-note-title") || n.getAttribute("data-note-id") || "Note";
+			lines.push("## " + title);
+			lines.push(ta.value.trim());
+			lines.push("");
+		});
+		if (!any) { showToast("No notes yet — nothing to copy."); return; }
+		var text = lines.join("\n");
+
+		function fallbackCopy() {
+			var tmp = document.createElement("textarea");
+			tmp.value = text;
+			tmp.style.position = "fixed";
+			tmp.style.opacity = "0";
+			document.body.appendChild(tmp);
+			tmp.select();
+			try { document.execCommand("copy"); } catch (e) { /* ignore */ }
+			document.body.removeChild(tmp);
+		}
+
+		var count = lines.filter(function (l) { return l.indexOf("## ") === 0; }).length;
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(text).then(
+				function () { showToast("Copied " + count + " note" + (count === 1 ? "" : "s") + " to clipboard."); },
+				function () { fallbackCopy(); showToast("Copied " + count + " note" + (count === 1 ? "" : "s") + "."); }
+			);
+		} else {
+			fallbackCopy();
+			showToast("Copied " + count + " note" + (count === 1 ? "" : "s") + ".");
+		}
+	});
+
+	// ── Clear all (two-click arm/confirm — no blocking dialog) ──
+	var clearBtn = document.getElementById("clearAll");
+	var armed = false;
+	var armTimer = null;
+	clearBtn.addEventListener("click", function () {
+		if (!armed) {
+			armed = true;
+			clearBtn.textContent = "Confirm clear";
+			clearBtn.classList.add("is-armed");
+			armTimer = window.setTimeout(function () {
+				armed = false;
+				clearBtn.textContent = "Clear all";
+				clearBtn.classList.remove("is-armed");
+			}, 3500);
+			return;
+		}
+		window.clearTimeout(armTimer);
+		armed = false;
+		clearBtn.textContent = "Clear all";
+		clearBtn.classList.remove("is-armed");
+		notes.forEach(function (n) {
+			var ta = n.querySelector("textarea");
+			var id = n.getAttribute("data-note-id");
+			if (ta) { ta.value = ""; }
+			n.classList.remove("has-content");
+			try { window.localStorage.removeItem(keyFor(id)); } catch (e) { /* ignore */ }
+		});
+		refreshCount();
+		showToast("All notes cleared.");
+	});
+})();
+</script>
+
+</body>
+</html>

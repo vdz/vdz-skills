@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<!--
+  html-report — "Ledger" style template.
+  Layout: a single warm 920px column of decision-ticket cards on off-white paper —
+  serif headings, mono labels, rust-terracotta accents; the only dark surface is the
+  "verbatim ask" slide. A sticky toolbar drives a localStorage-backed per-item note
+  layer (toggle, debounced autosave, two-click clear-all, copy-to-Markdown, toast).
+  To reuse: copy this file, keep the <head> (the entire <style> and <script>) VERBATIM,
+  and replace only the placeholder content below — title, masthead, TOC, the verbatim
+  ask, the decision tickets, and the footer. Keep every data-note-id / data-note-title
+  unique so the note JS keeps working.
+  Design rationale: ../styles/ledger.md. System fonts only — no webfonts.
+-->
+<html lang="en" data-theme="report">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Harness Audit — Claude Code Spring Cleaning</title>
+<style>
+	:root {
+		/* Tempered, warm editorial palette — no pure black on pure white. */
+		--paper: #f6f2ea;
+		--paper-raised: #fbf8f2;
+		--ink: #2f2c27;
+		--ink-2: #5a554c;
+		--ink-3: #8d877b;
+		--hair: #e2dccf;
+		--hair-strong: #cfc7b6;
+		--accent: #a8472b;
+		--accent-strong: #8a3a22;
+		--accent-soft: #f2e4dc;
+		--good: #4f7a4a;
+		--good-soft: #e7efe3;
+		--block: #9a6b1f;
+		--block-soft: #f3e9d2;
+		--cut: #a8472b;
+		--cut-soft: #f2e4dc;
+		--slide: #2b2924;
+		--slide-ink: #f3ece0;
+		--slide-ink-2: #c4bba9;
+		--slide-accent: #e0a07f;
+
+		--font-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+		--font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+		--font-mono: "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, monospace;
+
+		--maxw: 920px;
+		--r: 14px;
+		--r-sm: 9px;
+	}
+
+	* { box-sizing: border-box; }
+
+	html { scroll-behavior: smooth; }
+
+	body {
+		margin: 0;
+		background: var(--paper);
+		color: var(--ink);
+		font-family: var(--font-sans);
+		/* Larger base text + generous leading. */
+		font-size: 18px;
+		line-height: 1.72;
+		-webkit-font-smoothing: antialiased;
+		text-rendering: optimizeLegibility;
+	}
+
+	/* ── Sticky toolbar ── */
+	.toolbar {
+		position: sticky;
+		top: 0;
+		z-index: 50;
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		padding: 12px clamp(18px, 5vw, 48px);
+		background: color-mix(in srgb, var(--paper) 88%, transparent);
+		backdrop-filter: saturate(1.1) blur(8px);
+		border-bottom: 1px solid var(--hair);
+	}
+	.toolbar .brand {
+		font-family: var(--font-mono);
+		font-size: 12.5px;
+		letter-spacing: 0.04em;
+		color: var(--ink-3);
+		text-transform: uppercase;
+		margin-right: auto;
+	}
+	.toolbar .brand b { color: var(--accent-strong); font-weight: 600; }
+	.tbtn {
+		font-family: var(--font-sans);
+		font-size: 14.5px;
+		font-weight: 500;
+		color: var(--ink);
+		background: var(--paper-raised);
+		border: 1px solid var(--hair-strong);
+		border-radius: var(--r-sm);
+		padding: 7px 14px;
+		cursor: pointer;
+		transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+	}
+	.tbtn:hover { border-color: var(--accent); color: var(--accent-strong); }
+	.tbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+	.tbtn.is-armed { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+	.note-count {
+		font-family: var(--font-mono);
+		font-size: 12.5px;
+		color: var(--ink-3);
+		min-width: 7.5em;
+		text-align: right;
+	}
+	.note-count b { color: var(--accent-strong); }
+
+	/* ── Layout shell ── */
+	main {
+		max-width: var(--maxw);
+		margin: 0 auto;
+		padding: 0 clamp(18px, 5vw, 48px) 120px;
+	}
+
+	header.masthead {
+		padding: 64px 0 36px;
+		border-bottom: 2px solid var(--ink);
+		margin-bottom: 8px;
+	}
+	header.masthead .kicker {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--accent-strong);
+		margin: 0 0 14px;
+	}
+	header.masthead h1 {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		font-size: clamp(34px, 6vw, 52px);
+		line-height: 1.08;
+		letter-spacing: -0.015em;
+		margin: 0 0 18px;
+	}
+	header.masthead .standfirst {
+		font-size: 20px;
+		line-height: 1.6;
+		color: var(--ink-2);
+		max-width: 42em;
+		margin: 0 0 24px;
+	}
+	.meta-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px 22px;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--ink-3);
+	}
+	.meta-row a { color: var(--accent-strong); text-decoration: none; border-bottom: 1px solid var(--accent-soft); }
+	.meta-row a:hover { border-bottom-color: var(--accent); }
+	.meta-row .tally b { color: var(--ink); font-weight: 600; }
+
+	/* ── Table of contents ── */
+	nav.toc {
+		margin: 40px 0;
+		padding: 22px 26px;
+		background: var(--paper-raised);
+		border: 1px solid var(--hair);
+		border-radius: var(--r);
+	}
+	nav.toc h2 {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		margin: 0 0 14px;
+	}
+	nav.toc ol {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+		gap: 6px 28px;
+	}
+	nav.toc li { display: flex; gap: 10px; align-items: baseline; }
+	nav.toc .tn {
+		font-family: var(--font-mono);
+		font-size: 12.5px;
+		font-weight: 600;
+		color: var(--accent-strong);
+		min-width: 2.4em;
+	}
+	nav.toc a { color: var(--ink); text-decoration: none; line-height: 1.45; }
+	nav.toc a:hover { color: var(--accent-strong); }
+
+	/* ── Section + ticket cards ── */
+	section { margin: 56px 0 0; scroll-margin-top: 80px; }
+	.section-head {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		border-bottom: 1px solid var(--hair);
+		padding-bottom: 8px;
+		margin: 0 0 26px;
+	}
+
+	h2.block-title {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		font-size: 28px;
+		line-height: 1.2;
+		letter-spacing: -0.01em;
+		margin: 0 0 18px;
+	}
+
+	.ticket {
+		background: var(--paper-raised);
+		border: 1px solid var(--hair);
+		border-radius: var(--r);
+		padding: 30px clamp(20px, 4vw, 34px);
+		margin: 26px 0;
+	}
+	.ticket-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 6px;
+	}
+	.badge {
+		font-family: var(--font-mono);
+		font-weight: 600;
+		font-size: 13px;
+		color: #fff;
+		background: var(--accent);
+		border-radius: 7px;
+		padding: 3px 9px;
+		letter-spacing: 0.02em;
+	}
+	.jira {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--ink-3);
+		text-decoration: none;
+		border-bottom: 1px solid transparent;
+	}
+	.jira:hover { color: var(--accent-strong); border-bottom-color: var(--accent-soft); }
+	.pill {
+		margin-left: auto;
+		font-family: var(--font-mono);
+		font-size: 11.5px;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		padding: 3px 11px;
+		border-radius: var(--r-pill, 999px);
+	}
+	.pill.shipped { color: var(--good); background: var(--good-soft); }
+	.pill.blocked { color: var(--block); background: var(--block-soft); }
+	.pill.cut { color: var(--cut); background: var(--cut-soft); }
+
+	.ticket h3 {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		font-size: 23px;
+		line-height: 1.25;
+		letter-spacing: -0.01em;
+		margin: 6px 0 18px;
+	}
+
+	.ask {
+		margin: 0 0 22px;
+		padding: 14px 18px;
+		background: var(--paper);
+		border-left: 3px solid var(--hair-strong);
+		border-radius: 0 var(--r-sm) var(--r-sm) 0;
+	}
+	.ask .ask-label {
+		display: block;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		margin-bottom: 6px;
+	}
+	.ask q {
+		font-family: var(--font-serif);
+		font-style: italic;
+		font-size: 17px;
+		color: var(--ink-2);
+		quotes: "“" "”";
+		line-height: 1.55;
+	}
+	.ask q + q { display: block; margin-top: 6px; }
+
+	.crux-label {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--accent-strong);
+		margin: 4px 0 12px;
+	}
+	.decisions { margin: 0; padding: 0; list-style: none; }
+	.decisions > li {
+		position: relative;
+		padding: 0 0 16px 26px;
+		margin: 0;
+	}
+	.decisions > li::before {
+		content: "";
+		position: absolute;
+		left: 4px;
+		top: 11px;
+		width: 8px;
+		height: 8px;
+		border-radius: 2px;
+		background: var(--accent);
+		transform: rotate(45deg);
+	}
+	.decisions > li:last-child { padding-bottom: 0; }
+	.decisions .d-lead { font-weight: 600; color: var(--ink); }
+	.decisions code {
+		font-family: var(--font-mono);
+		font-size: 0.86em;
+		background: var(--accent-soft);
+		color: var(--accent-strong);
+		padding: 1px 5px;
+		border-radius: 5px;
+	}
+
+	/* ── Per-ticket screenshot ── */
+	.shot { margin: 2px 0 22px; }
+	.shot img {
+		display: block;
+		width: 100%;
+		height: auto;
+		border: 1px solid var(--hair-strong);
+		border-radius: var(--r-sm);
+		background: #fff;
+		box-shadow: 0 1px 2px rgba(47, 44, 39, 0.05), 0 10px 28px rgba(47, 44, 39, 0.08);
+	}
+	.shot figcaption {
+		margin-top: 10px;
+		font-family: var(--font-mono);
+		font-size: 11.5px;
+		line-height: 1.5;
+		letter-spacing: 0.02em;
+		color: var(--ink-3);
+		display: flex;
+		gap: 9px;
+	}
+	.shot figcaption::before {
+		content: "";
+		flex: none;
+		width: 8px;
+		height: 8px;
+		margin-top: 4px;
+		border-radius: 2px;
+		background: var(--accent);
+		transform: rotate(45deg);
+	}
+	.shot--empty .shot-frame {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding: 20px 22px;
+		border: 1px dashed var(--hair-strong);
+		border-radius: var(--r-sm);
+		background: var(--paper);
+	}
+	.shot--empty .shot-glyph { flex: none; color: var(--hair-strong); }
+	.shot--empty .shot-glyph svg { display: block; }
+	.shot--empty .shot-text { font-family: var(--font-sans); font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+	.shot--empty .shot-text b {
+		display: block;
+		margin-bottom: 3px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+	}
+
+	/* ── Raw-client-ask slide frame ── */
+	.slide-wrap { margin: 40px 0 8px; }
+	.slide {
+		position: relative;
+		background: var(--slide);
+		color: var(--slide-ink);
+		border-radius: 18px;
+		padding: clamp(26px, 5vw, 52px);
+		box-shadow: 0 24px 60px -28px rgba(43, 41, 36, 0.7), 0 2px 0 rgba(255,255,255,0.04) inset;
+		overflow: hidden;
+	}
+	.slide::after {
+		content: "THE ASK";
+		position: absolute;
+		top: 20px;
+		right: 26px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.22em;
+		color: var(--slide-ink-2);
+		opacity: 0.8;
+	}
+	.slide .slide-kicker {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--slide-accent);
+		margin: 0 0 6px;
+	}
+	.slide h2 {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		font-size: clamp(24px, 4vw, 34px);
+		line-height: 1.14;
+		letter-spacing: -0.01em;
+		margin: 0 0 4px;
+		color: var(--slide-ink);
+	}
+	.slide .slide-sub {
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--slide-ink-2);
+		margin: 0 0 26px;
+	}
+	.slide .preamble {
+		font-style: italic;
+		color: var(--slide-ink-2);
+		border-left: 2px solid var(--slide-accent);
+		padding-left: 16px;
+		margin: 0 0 26px;
+		max-width: 46em;
+	}
+	.slide .ask-group { margin: 0 0 22px; }
+	.slide .ask-group:last-child { margin-bottom: 0; }
+	.slide .ask-group > .grp {
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--slide-accent);
+		margin: 0 0 10px;
+		border-bottom: 1px solid rgba(224, 160, 127, 0.25);
+		padding-bottom: 6px;
+	}
+	.slide ul {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.slide ul li {
+		position: relative;
+		padding: 5px 0 5px 22px;
+		font-family: var(--font-mono);
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--slide-ink);
+	}
+	.slide ul li::before {
+		content: "—";
+		position: absolute;
+		left: 0;
+		color: var(--slide-ink-2);
+	}
+
+	/* ── Annotation infra ── */
+	.note {
+		margin-top: 22px;
+		border-top: 1px dashed var(--hair-strong);
+		padding-top: 14px;
+	}
+	.note-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		font-family: var(--font-sans);
+		font-size: 13.5px;
+		font-weight: 500;
+		color: var(--ink-3);
+		background: none;
+		border: 0;
+		padding: 2px 0;
+		cursor: pointer;
+	}
+	.note-toggle:hover { color: var(--accent-strong); }
+	.note-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+	.note-toggle .dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--hair-strong);
+		flex: none;
+	}
+	.note.has-content .note-toggle { color: var(--accent-strong); }
+	.note.has-content .note-toggle .dot { background: var(--accent); }
+	.note-body { margin-top: 12px; }
+	.note-body[hidden] { display: none; }
+	.note textarea {
+		width: 100%;
+		min-height: 84px;
+		resize: vertical;
+		font-family: var(--font-sans);
+		font-size: 15.5px;
+		line-height: 1.6;
+		color: var(--ink);
+		background: var(--paper);
+		border: 1px solid var(--hair-strong);
+		border-radius: var(--r-sm);
+		padding: 12px 14px;
+	}
+	.note textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+	.note .saved-hint {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--ink-3);
+		margin-top: 6px;
+		height: 1.2em;
+		opacity: 0;
+		transition: opacity 160ms ease;
+	}
+	.note .saved-hint.show { opacity: 1; }
+
+	/* Section-level notes get a faint accent ground to distinguish from per-item. */
+	.note.section-note {
+		background: var(--accent-soft);
+		border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+		border-radius: var(--r);
+		border-top: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+		padding: 16px 20px;
+		margin-top: 28px;
+	}
+	.note.section-note .note-toggle { color: var(--accent-strong); }
+
+	footer {
+		margin-top: 72px;
+		padding-top: 24px;
+		border-top: 1px solid var(--hair);
+		font-family: var(--font-mono);
+		font-size: 12.5px;
+		color: var(--ink-3);
+		line-height: 1.7;
+	}
+
+	/* Toast for copy confirmation */
+	.toast {
+		position: fixed;
+		bottom: 28px;
+		left: 50%;
+		transform: translateX(-50%) translateY(20px);
+		background: var(--slide);
+		color: var(--slide-ink);
+		font-family: var(--font-sans);
+		font-size: 14.5px;
+		padding: 12px 22px;
+		border-radius: 10px;
+		box-shadow: 0 16px 40px -18px rgba(43,41,36,0.7);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 200ms ease, transform 200ms ease;
+		z-index: 60;
+	}
+	.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+	@media (max-width: 600px) {
+		body { font-size: 17px; }
+		.toolbar { flex-wrap: wrap; }
+		.toolbar .brand { width: 100%; margin-bottom: 4px; }
+	}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+	<span class="brand">CLAUDE CODE <b>harness</b> · Spring-Cleaning Audit</span>
+	<span class="note-count" id="noteCount"><b>0</b> notes</span>
+	<button class="tbtn" id="copyAll" type="button">Copy all notes</button>
+	<button class="tbtn" id="clearAll" type="button">Clear all</button>
+</div>
+
+<main>
+	<header class="masthead">
+		<p class="kicker">17 Aug 2026 · Applied — rev. 2</p>
+		<h1>37 skills down to 16. Ten plugins down to five.</h1>
+		<p class="standfirst">
+			A full inventory of every skill, plugin, MCP server and hook loaded into your Claude
+			Code sessions — measured against 1,551 real transcripts. <b>Your notes have been
+			applied and the cuts are live.</b> Each block below records what was decided and
+			what was done; two clusters are still open and marked as such at the bottom.
+		</p>
+		<div class="meta-row">
+			<span class="tally"><b>21</b> skills cut · <b>5</b> plugins disabled · <b>2</b> uninstalled · <b>16</b> tasks retired</span>
+			<span>Backups <code style="font-family:var(--font-mono)">~/.claude/backups/</code></span>
+			<span>Still open <b>C1 · C5</b></span>
+		</div>
+	</header>
+
+	<!-- ── Table of contents ── -->
+	<nav class="toc" aria-label="Contents">
+		<h2>Clusters</h2>
+		<ol>
+			<li><span class="tn">C1</span><a href="#c1">MCP tool sprawl — the real cost</a></li>
+			<li><span class="tn">C2</span><a href="#c2">The video suite — 10 skills, 1 use</a></li>
+			<li><span class="tn">C3</span><a href="#c3">Cross-layer duplicates</a></li>
+			<li><span class="tn">C4</span><a href="#c4">Never-invoked solo skills</a></li>
+			<li><span class="tn">C5</span><a href="#c5">The Ripe suite</a></li>
+			<li><span class="tn">C6</span><a href="#c6">Plugins contributing nothing</a></li>
+			<li><span class="tn">C7</span><a href="#c7">CLAUDE.md ↔ Pocock drift</a></li>
+			<li><span class="tn">C8</span><a href="#c8">Filesystem &amp; scheduler cruft</a></li>
+		</ol>
+	</nav>
+
+	<!-- ── The ask ── -->
+	<div class="slide-wrap">
+		<div class="slide">
+			<p class="slide-kicker">Your notes, as given</p>
+			<h2>Spring cleaning the harness</h2>
+			<p class="slide-sub">Applied 17 Aug · fully reversible</p>
+			<p class="preamble">
+				“let's make a spring cleaning in our Claude Code harness, first list all the skills
+				installed currently, so we can remove the unused and then make more surgical changes.
+				The goal is to tighten the harness, making it leaner, and more efficient.”
+			</p>
+
+			<div class="ask-group">
+				<p class="grp">What was measured</p>
+				<ul>
+					<li>Every skill visible to the model this session — 117 across four separate layers.</li>
+					<li>Invocation counts grepped from 1,551 session transcripts (the <code>Skill</code> tool's own record).</li>
+					<li>All 11 installed plugins, their enabled state, and what each actually contributes.</li>
+					<li>15 MCP servers and the ~280 tool names they inject into every request.</li>
+					<li>Hooks, settings, scheduled tasks, and on-disk cruft under <code>~/.claude</code>.</li>
+				</ul>
+			</div>
+
+			<div class="ask-group">
+				<p class="grp">Headline</p>
+				<ul>
+					<li>Of 37 skills in <code>~/.claude/skills</code>, <b>22 have never been invoked once</b>.</li>
+					<li>Four separate layers install skills, and three of them ship a <code>find-skills</code>.</li>
+					<li>MCP tool names — not skills — are the single largest fixed context cost.</li>
+					<li>Your global CLAUDE.md instructs a workflow the model <b>cannot</b> auto-invoke.</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+
+	<div class="note section-note" data-note-id="raw-ask" data-note-title="Note on the ask / scope">
+		<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Note on scope</button>
+		<div class="note-body" hidden>
+			<textarea placeholder="Anything I've mis-scoped? Things you want left alone regardless of usage data…"></textarea>
+			<div class="saved-hint">saved</div>
+		</div>
+	</div>
+
+	<!-- ── Cross-cutting ── -->
+	<section id="cross">
+		<p class="section-head">Reading the inventory — how the harness is actually assembled</p>
+		<h2 class="block-title">Four layers, no coordination between them</h2>
+		<div class="ticket">
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">Layer 1 — your own skills.</span> 37 directories in
+					<code>~/.claude/skills</code>, of which 14 are symlinks out to
+					<code>~/.agents/skills</code> and 8 to <code>~/Dev/vdz-skills</code>. This is the
+					only layer you fully control, and the only one where deleting is trivial.
+				</li>
+				<li>
+					<span class="d-lead">Layer 2 — installed plugins.</span> 11 plugins from 3
+					marketplaces. Contributes ~38 model-visible skills plus commands and agents.
+					Governed by <code>enabledPlugins</code> in <code>settings.json</code> — flipping a
+					plugin to <code>false</code> removes its whole block from context in one edit.
+				</li>
+				<li>
+					<span class="d-lead">Layer 3 — the claude.ai / desktop bundle.</span> The
+					<code>anthropic-skills:*</code>, <code>design:*</code> and
+					<code>cowork-plugin-management:*</code> namespaces — ~29 skills — arrive with the
+					desktop app, not from your config. <code>ListPlugins</code> returns empty, so these
+					are managed in claude.ai settings, not on disk.
+				</li>
+				<li>
+					<span class="d-lead">Layer 4 — built-ins.</span> <code>dataviz</code>,
+					<code>artifact-*</code>, <code>code-review</code>, <code>simplify</code>,
+					<code>loop</code>, <code>run</code>, <code>init</code>, <code>security-review</code>
+					and friends ship with the CLI. Not removable, and not worth trying.
+				</li>
+				<li>
+					<span class="d-lead">The consequence.</span> Layers 1–3 overlap heavily and none of
+					them knows the others exist. Every duplicate below is a case of the same capability
+					arriving three times by three different routes — which is <em>worse</em> than
+					useless, because the model has to disambiguate before it can act.
+				</li>
+			</ul>
+			<div class="note" data-note-id="cross" data-note-title="Cross-cutting — four layers">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Your comment on the layering…"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ── Per-cluster sections ── -->
+	<section id="tickets">
+		<p class="section-head">Cluster by cluster — the crux</p>
+
+		<!-- C1 -->
+		<article class="ticket" id="c1">
+			<div class="ticket-head">
+				<span class="badge">C1</span>
+				<span class="jira">~280 tool names · 15 servers</span>
+				<span class="pill blocked">Open — needs you</span>
+			</div>
+			<h3>MCP tool sprawl is the real context cost — not skills</h3>
+			<div class="ask">
+				<span class="ask-label">What's loaded</span>
+				<q>Jira/Confluence (44 tools) · Gmail (28) · Slack (19) · chrome-devtools (30) · claude-in-chrome (24) · Control_Chrome (11) · Calendar (9) · Drive (11) · plus terminal, pdf-viewer, scheduled-tasks, mcp-registry, visualize, iOS-simulator, Control_your_Mac.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">OPEN — recommendation below, needs your yes.</span> You said Figma, Linear, Notion, Intercom and Asana are unused: those are 5 of the 7 unauthenticated <code>design</code>-plugin servers, so disabling that plugin costs you nothing today. For browsers, <code>drive-browser</code> already routes deliberately — it wants <code>chrome-devtools</code> for CDP work and treats Claude-in-Chrome as a last resort, so <code>Control_Chrome</code> (11 tools) is the redundant one. See the recommendation in chat before I touch anything here.
+				</li>
+				<li>
+					<span class="d-lead">Deferred ≠ free.</span> Tool schemas load on demand, but all
+					~280 <em>names</em> sit in every single request. That dwarfs the ~13 KB of skill
+					descriptions this whole audit is otherwise about. If you only fix one thing, fix this.
+				</li>
+				<li>
+					<span class="d-lead">Three browser stacks are mounted at once.</span>
+					<code>chrome-devtools</code> (30 tools), <code>claude-in-chrome</code> (24) and
+					<code>Control_Chrome</code> (11) — 65 tools for one job. Your own memory note already
+					records the intended chain (agent-browser → playwright-cli → chrome-devtools → pane)
+					and that the Playwright plugin was disabled on purpose. <b>Recommend:</b> keep
+					<code>chrome-devtools</code>, drop <code>Control_Chrome</code>, and let the built-in
+					Browser pane cover the rest.
+				</li>
+				<li>
+					<span class="d-lead">7 servers are dead on arrival.</span> The <code>design</code>
+					plugin mounts asana, atlassian, figma, intercom, linear, notion and slack — all
+					unauthenticated, all unusable, all still costing context. Either authorise the one or
+					two you want or disable the plugin.
+				</li>
+				<li>
+					<span class="d-lead">Only one is yours to edit on disk.</span>
+					<code>~/.claude.json</code> declares just <code>chrome-devtools</code>. The rest are
+					claude.ai connectors — turn them off in connector settings, not in a file.
+				</li>
+			</ul>
+			<div class="note" data-note-id="c1" data-note-title="C1 — MCP tool sprawl">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Which connectors do you actually use week to week? Jira/Slack/Gmail/Calendar are presumably load-bearing…"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</article>
+
+		<!-- C2 -->
+		<article class="ticket" id="c2">
+			<div class="ticket-head">
+				<span class="badge">C2</span>
+				<span class="jira">10 skills · ~3,600 desc chars</span>
+				<span class="pill shipped">Done — 10 cut</span>
+			</div>
+			<h3>The HyperFrames video suite — 10 skills, one invocation, ever</h3>
+			<div class="ask">
+				<span class="ask-label">The evidence</span>
+				<q>hyperframes · hyperframes-cli · hyperframes-registry · website-to-hyperframes · animejs · css-animations · gsap · lottie · three — all NEVER invoked across 1,551 transcripts.</q>
+				<q>hyperframes-media — invoked exactly once.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">DONE — all ten unlinked.</span> Sources untouched in <code>~/.agents/skills</code>. Per your note, a capability memo was written to <code>~/Dev/vdz-skills/docs/retired-hyperframes-capability-note.md</code> — what HyperFrames can make, where it would earn its place in your world, and the one-line command to bring it back.
+				</li>
+				<li>
+					<span class="d-lead">Largest single description block in the harness.</span>
+					<code>hyperframes</code> alone carries an 826-character description — the longest of
+					any skill you own — and it has never fired. The five animation adapters
+					(<code>gsap</code>, <code>animejs</code>, <code>lottie</code>, <code>three</code>,
+					<code>css-animations</code>) are only ever useful <em>inside</em> a HyperFrames
+					composition, so they are pure dead weight without it.
+				</li>
+				<li>
+					<span class="d-lead">These are symlinks, not copies.</span> All ten point into
+					<code>~/.agents/skills</code>. Removing the symlink from
+					<code>~/.claude/skills</code> costs you nothing — the source stays on disk and a
+					single <code>ln -s</code> brings any of them back the day you actually make a video.
+				</li>
+				<li>
+					<span class="d-lead">Recommend: unlink all ten.</span> Roughly 30 % of your
+					personal-skill context for a capability you have used once in five months.
+				</li>
+			</ul>
+			<div class="note" data-note-id="c2" data-note-title="C2 — HyperFrames video suite">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Any upcoming need for video/animation? If yes, say which and I'll keep that subset…"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</article>
+
+		<!-- C3 -->
+		<article class="ticket" id="c3">
+			<div class="ticket-head">
+				<span class="badge">C3</span>
+				<span class="jira">8 capabilities · 24 skills</span>
+				<span class="pill shipped">Done</span>
+			</div>
+			<h3>The same capability arriving three times from three layers</h3>
+			<div class="ask">
+				<span class="ask-label">The collisions</span>
+				<q>find-skills ×3 · skill-creator ×2 · grill ×3 · code-review ×5 · schedule ×2 · teach ×2 · TDD ×2 · debugging ×2.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">DONE — consolidated onto Pocock.</span> Unlinked <code>teach-me</code>, <code>explain-it-back</code>, <code>regression-dog</code>; disabled the <code>code-review</code> plugin and <code>code-simplifier</code>. CLAUDE.md now names Pocock's <code>code-review</code> and <code>teach</code> as canonical. <b>Kept your local <code>find-skills</code></b> — it wraps <code>npx skills</code> (the open ecosystem), whereas the two duplicates only reach Anthropic's catalog, which the built-in <code>SearchSkills</code>/<code>SuggestSkills</code> tools already cover. <b>Your action:</b> disable <code>find-skills</code> and <code>grill-me</code> in claude.ai skill settings — I can't reach that layer.
+				</li>
+				<li>
+					<span class="d-lead">find-skills, three ways.</span> Your symlink, plus
+					<code>anthropic-skills:find-skills</code>, plus a claude.ai-enabled
+					<code>find-skills</code>. <b>Keep one</b> — the claude.ai one, since it can actually
+					install. Unlink yours.
+				</li>
+				<li>
+					<span class="d-lead">Grilling, three ways.</span>
+					<code>anthropic-skills:grill-me</code>, <code>mattpocock-skills:grilling</code>, and
+					<code>mattpocock-skills:grill-with-docs</code> (slash-only — see C7). Your CLAUDE.md
+					points at the Pocock one. <b>Recommend:</b> disable the claude.ai <code>grill-me</code>.
+				</li>
+				<li>
+					<span class="d-lead">Code review, five ways.</span> built-in <code>/code-review</code>
+					· built-in <code>/simplify</code> · <code>code-review@official</code> plugin ·
+					<code>mattpocock-skills:code-review</code> · <code>superpowers:requesting-</code> and
+					<code>receiving-code-review</code> · plus <code>regression-dog</code> and the
+					<code>code-simplifier</code> agent. Seven entry points for one activity.
+					<b>Recommend:</b> keep the built-in <code>/code-review</code> and the Pocock one
+					(it's what <code>implement</code> calls); drop the official plugin, drop
+					<code>code-simplifier</code>, drop <code>regression-dog</code> (never invoked).
+				</li>
+				<li>
+					<span class="d-lead">Process-skill overlap: superpowers vs Pocock.</span> Both ship
+					TDD and systematic-debugging. Your CLAUDE.md says Pocock wins. But superpowers is the
+					only one you actually use — <code>brainstorming</code> (11×),
+					<code>writing-plans</code> (10×), <code>subagent-driven-development</code> (6×). They
+					are not really competing: superpowers is doing your planning, Pocock your coding.
+					<b>Recommend:</b> keep both plugins, but delete the three deprecated superpowers
+					commands (<code>brainstorm</code>, <code>execute-plan</code>, <code>write-plan</code>)
+					that are pure noise.
+				</li>
+				<li>
+					<span class="d-lead">teach-me vs explain-it-back.</span> Two of yours, plus
+					<code>mattpocock-skills:teach</code>. <code>teach-me</code> used once,
+					<code>explain-it-back</code> never. <b>Recommend:</b> keep <code>teach-me</code>,
+					unlink <code>explain-it-back</code>.
+				</li>
+			</ul>
+			<div class="note" data-note-id="c3" data-note-title="C3 — Cross-layer duplicates">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Push back on any of these — especially the code-review consolidation…"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</article>
+
+		<!-- C4 -->
+		<article class="ticket" id="c4">
+			<div class="ticket-head">
+				<span class="badge">C4</span>
+				<span class="jira">8 skills · 0 invocations</span>
+				<span class="pill shipped">Done — 7 shelved</span>
+			</div>
+			<h3>Solo skills that have never once fired</h3>
+			<div class="ask">
+				<span class="ask-label">Never invoked</span>
+				<q>quick-recap · read-the-damn-docs · regression-dog · stay-within-limits · taking-notes · visual-plan · visualize-repo · better-colors · better-ui</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">DONE — 7 shelved, not deleted.</span> Moved to <code>~/.claude/skills-disabled/</code> along with the two orphaned command wrappers. <code>stay-within-limits</code> kept as recommended.
+				</li>
+				<li>
+					<span class="d-lead">Two are redundant with instructions you already have.</span>
+					<code>quick-recap</code> duplicates the red/yellow/green block your CLAUDE.md already
+					mandates, and <code>read-the-damn-docs</code> duplicates the <code>context7</code>
+					MCP server's own standing instruction to fetch live docs. Both are belt-and-braces
+					that never engaged. <b>Cut.</b>
+				</li>
+				<li>
+					<span class="d-lead">The better-* trial is over and it lost.</span> Your memory
+					records installing <code>better-colors</code>, <code>better-ui</code> and
+					<code>better-typography</code> on 19 Jul, disabling
+					<code>make-interfaces-feel-better</code> to make room. Four weeks later:
+					<code>better-typography</code> once, the other two never. <b>Recommend:</b> keep
+					<code>better-typography</code>, cut the other two, and either restore
+					<code>make-interfaces-feel-better</code> or delete <code>skills-disabled/</code>.
+				</li>
+				<li>
+					<span class="d-lead">visual-plan never fired but visual-recap did (2×).</span> Both
+					have <code>~/.claude/commands/*.md</code> wrappers, so they're slash-invocable
+					regardless. <b>Cut <code>visual-plan</code> and <code>visualize-repo</code>; keep
+					<code>visual-recap</code>.</b>
+				</li>
+				<li>
+					<span class="d-lead">Deliberate keeps despite zero use.</span>
+					<code>stay-within-limits</code> and <code>taking-notes</code> are cheap (187 and 250
+					chars) and only matter in long unattended runs — exactly the sessions where you
+					aren't watching. Your call; I'd keep <code>stay-within-limits</code> and cut
+					<code>taking-notes</code>, which overlaps <code>show-me-your-work</code> (used 4×).
+				</li>
+			</ul>
+			<div class="note" data-note-id="c4" data-note-title="C4 — Never-invoked solo skills">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Which of these do you want kept on principle rather than evidence?"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</article>
+
+		<!-- C5 -->
+		<article class="ticket" id="c5">
+			<div class="ticket-head">
+				<span class="badge">C5</span>
+				<span class="jira">7 skills · ~3,000 desc chars</span>
+				<span class="pill blocked">Cut done · tangent open</span>
+			</div>
+			<h3>The Ripe suite — half load-bearing, half speculative</h3>
+			<div class="ask">
+				<span class="ask-label">The split</span>
+				<q>Used: ripe-init (2×) · building-ripe-components (2×) · building-ripe-store (1×) · ripe-audit (1×).</q>
+				<q>Never: building-ripe-routing · building-ripe-tests · ripe-overview.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">PARTIAL — <code>ripe-overview</code> shelved; the tangent is open.</span> You asked to modernise the remaining six: less verbose, current best practices, tuned for the newest models. That's a real piece of work (~half a day) and wants <code>/mattpocock-skills:writing-for-agents</code> plus a spec — worth its own session, not a footnote to a cleanup.
+				</li>
+				<li>
+					<span class="d-lead">This is a real, live architecture — don't gut it.</span> Unlike
+					the video suite, four of these have fired and the method is something you're actively
+					building on. The question is only whether the unused three earn their ~1,600 chars.
+				</li>
+				<li>
+					<span class="d-lead"><code>building-ripe-tests</code> and
+					<code>building-ripe-routing</code> are structurally coupled.</span> Their own
+					descriptions say to pair them with <code>building-ripe-components</code> and
+					<code>building-ripe-store</code>, which <em>are</em> used. Cutting them leaves the
+					suite with a hole exactly when you next build a full feature. <b>Recommend: keep.</b>
+				</li>
+				<li>
+					<span class="d-lead"><code>ripe-overview</code> is the one to question.</span> 621
+					chars — third-largest in your set — for a "where are we" narrative report that
+					overlaps <code>ripe-audit</code> (used) and <code>visual-recap</code> (used). <b>Cut
+					it</b>, and reach for <code>ripe-audit</code> when you need project state.
+				</li>
+			</ul>
+			<div class="note" data-note-id="c5" data-note-title="C5 — Ripe suite">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="How live is Ripe right now? If a full feature build is imminent, keep all seven…"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</article>
+
+		<!-- C6 -->
+		<article class="ticket" id="c6">
+			<div class="ticket-head">
+				<span class="badge">C6</span>
+				<span class="jira">6 plugins · settings.json</span>
+				<span class="pill shipped">Done — 5 off, 2 gone</span>
+			</div>
+			<h3>Plugins that cost context and return nothing</h3>
+			<div class="ask">
+				<span class="ask-label">Audit of all 11</span>
+				<q>github: contributes zero skills and zero commands. ralph-loop: 3 commands, never used. code-simplifier: one agent, duplicated by /simplify. claude-md-management: 2 entries, superseded by mattpocock-skills:writing-for-agents. atlassian: installed but absent from enabledPlugins — dead cache. playwright: explicitly false, but still on disk.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">DONE — and the Playwright question has a definitive answer, from your own skill.</span> <code>drive-browser</code> states it outright: <q>Do not reach for @playwright/mcp — the always-on plugin is disabled on purpose; use playwright-cli.</q> The skill depends on the <b>CLI</b>, installed separately by its <code>setup.sh</code> — never on the plugin. The plugin was pure cost. <b>Uninstalled</b>, along with <code>atlassian</code> (installed but never enabled).
+				</li>
+				<li>
+					<span class="d-lead">Disable, don't uninstall.</span> Flipping an entry to
+					<code>false</code> in <code>enabledPlugins</code> removes it from context immediately
+					and is a one-character undo. Uninstalling reclaims disk (95 MB total) but is
+					slower to reverse. Start with the flag.
+				</li>
+				<li>
+					<span class="d-lead">Recommend disabling four:</span> <code>github</code> (contributes
+					literally nothing — the <code>gh</code> CLI does this job), <code>ralph-loop</code>
+					(superseded by the built-in <code>/loop</code>), <code>code-simplifier</code>
+					(superseded by built-in <code>/simplify</code>), <code>claude-md-management</code>
+					(superseded by <code>mattpocock-skills:writing-for-agents</code>).
+				</li>
+				<li>
+					<span class="d-lead">Two housekeeping items.</span> <code>atlassian</code> is
+					installed but never enabled — remove it from disk entirely. <code>playwright</code> is
+					deliberately <code>false</code> per your memory note; leave the flag, but the cache
+					can go.
+				</li>
+				<li>
+					<span class="d-lead">Definitely keep:</span> <code>superpowers</code> (your top-3
+					most-used skills all live here), <code>mattpocock-skills</code> (your documented
+					default workflow), <code>context7</code> (live docs), <code>frontend-design</code>,
+					<code>skill-creator</code>.
+				</li>
+			</ul>
+			<div class="note" data-note-id="c6" data-note-title="C6 — Plugins contributing nothing">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Any plugin here you want kept for a reason the usage data can't see?"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</article>
+
+		<!-- C7 -->
+		<article class="ticket" id="c7">
+			<div class="ticket-head">
+				<span class="badge">C7</span>
+				<span class="jira">~/.claude/CLAUDE.md</span>
+				<span class="pill shipped">Done — rewritten</span>
+			</div>
+			<h3>Your global CLAUDE.md prescribes a workflow the model can't start</h3>
+			<div class="ask">
+				<span class="ask-label">From your CLAUDE.md</span>
+				<q>New feature or non-trivial change → start with <code>grill-with-docs</code> (don't code straight from a one-line ask).</q>
+				<q>Work too big for one session → <code>to-spec</code>, then <code>to-tickets</code>; one ticket = one session, executed with <code>implement</code>.</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">DONE — and the disabling is deliberate, not a bug.</span> 15 of 24 Pocock skills <em>are</em> model-invocable (<code>tdd</code>, <code>code-review</code>, <code>diagnosing-bugs</code>, <code>prototype</code>, <code>research</code>…). Only the 9 workflow <em>entry points</em> are slash-only — because <code>implement</code> or <code>to-spec</code> auto-firing on an ambiguous ask would burn a session. Overriding it means editing the plugin cache, which is wiped on every update. Instead CLAUDE.md now tells me to <b>propose</b> the entry point in one line and wait — same outcome, survives updates.
+				</li>
+				<li>
+					<span class="d-lead">Seven of the nine named skills are invisible to the model.</span>
+					<code>grill-with-docs</code>, <code>to-spec</code>, <code>to-tickets</code>,
+					<code>implement</code>, <code>wayfinder</code>, <code>ask-matt</code> and
+					<code>handoff</code> all carry <code>disable-model-invocation: true</code> in their
+					frontmatter. They exist on disk and work fine — but only when <em>you</em> type them.
+					Only <code>prototype</code> and <code>research</code> are model-invocable.
+				</li>
+				<li>
+					<span class="d-lead">And the names are wrong anyway.</span> Since the 30 Jul move to
+					the plugin, they are namespaced:
+					<code>/mattpocock-skills:grill-with-docs</code>, not <code>grill-with-docs</code>. A
+					bare name won't resolve if you type it.
+				</li>
+				<li>
+					<span class="d-lead">Net effect.</span> Every session loads a ~700-character workflow
+					block instructing behaviour that cannot happen automatically. That's the worst kind
+					of harness weight: it costs context <em>and</em> creates a false expectation the
+					model will start the loop on its own.
+				</li>
+				<li>
+					<span class="d-lead">Recommend: rewrite the block to be honest.</span> Fix the names
+					to the namespaced form and reframe it as "when I type these, here's the flow" — plus
+					a one-line instruction to <em>prompt you</em> to run <code>grill-with-docs</code>
+					when a non-trivial change appears, since that's the behaviour you actually wanted.
+					35 % shorter and it will work.
+				</li>
+			</ul>
+			<div class="note" data-note-id="c7" data-note-title="C7 — CLAUDE.md drift">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Want the rewrite drafted now, or after the cuts land?"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</article>
+
+		<!-- C8 -->
+		<article class="ticket" id="c8">
+			<div class="ticket-head">
+				<span class="badge">C8</span>
+				<span class="jira">899 MB · 21 scheduled tasks</span>
+				<span class="pill shipped">Done — 16 retired</span>
+			</div>
+			<h3>Disk and scheduler cruft — zero context cost, easy wins</h3>
+			<div class="ask">
+				<span class="ask-label">On disk</span>
+				<q>projects/ 778 MB (1,551 transcripts) · plugins/ 95 MB · session-env/ 495 dirs · shell-snapshots/ 52 · backups/ 480 KB</q>
+			</div>
+			<p class="crux-label">The crux</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">DONE — and none of it was running.</span> All 13 registered tasks were already <code>enabled: false</code>; the four you named weren't even registered. Removed 16 task dirs, 4 stale config backups, 495 session-env dirs, 52 shell snapshots, and 86 inert one-off permission rules. Everything backed up to <code>~/.claude/backups/</code>.
+				</li>
+				<li>
+					<span class="d-lead">Twelve of 21 scheduled tasks are dated one-offs.</span>
+					<code>checkin-pre-1330-0709</code>, <code>checkin-post-1730-0623</code> and ten
+					siblings are stale June/July artifacts. The nine standing ones
+					(<code>morning-briefing</code>, <code>day-conductor</code>, <code>eod-debrief</code>,
+					<code>eow-review</code>, <code>pr-response-engine</code>…) are live and should stay.
+				</li>
+				<li>
+					<span class="d-lead">Stale config backups.</span>
+					<code>settings.json.bak-2026-07-15</code>,
+					<code>settings.json.lens-bak</code>, and
+					<code>known_marketplaces.json.tmp.97dc86c8</code> — all superseded, all safe to
+					delete once you've confirmed current settings are good.
+				</li>
+				<li>
+					<span class="d-lead">495 session-env directories and 52 shell snapshots.</span>
+					Regenerated on demand; safe to clear. <code>projects/</code> at 778 MB is your
+					transcript history — <em>don't</em> bulk-delete it, it's the evidence base this
+					audit ran on, but pruning pre-June sessions is reasonable.
+				</li>
+				<li>
+					<span class="d-lead">Permissions list is 90+ entries of one-off Bash allowances.</span>
+					<code>settings.local.json</code> has accumulated hyper-specific rules
+					(<code>Bash(cp ~/.zshrc "$DEST/.zshrc")</code>). Given
+					<code>defaultMode: bypassPermissions</code>, they're inert. Safe to reset to empty.
+				</li>
+			</ul>
+			<div class="note" data-note-id="c8" data-note-title="C8 — Filesystem &amp; scheduler cruft">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="How far back should transcript pruning go? Anything in scheduled-tasks you want preserved?"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</article>
+
+		<!-- Summary -->
+		<article class="ticket" id="summary">
+			<div class="ticket-head">
+				<span class="badge">→</span>
+				<span class="jira">Proposed order of operations</span>
+				<span class="pill shipped">6 of 8 applied</span>
+			</div>
+			<h3>What I'd do, in order, and roughly what it costs</h3>
+			<p class="crux-label">Sequence</p>
+			<ul class="decisions">
+				<li>
+					<span class="d-lead">1 · Skill cuts — ~10 min, fully reversible.</span> Unlink the 10
+					video skills, plus <code>find-skills</code>, <code>explain-it-back</code>,
+					<code>quick-recap</code>, <code>read-the-damn-docs</code>, <code>regression-dog</code>,
+					<code>better-colors</code>, <code>better-ui</code>, <code>taking-notes</code>,
+					<code>visual-plan</code>, <code>visualize-repo</code>, <code>ripe-overview</code>.
+					<b>37 → 17 skills.</b> Every one is a symlink or a copy that survives elsewhere.
+				</li>
+				<li>
+					<span class="d-lead">2 · Plugin flags — ~2 min, one file.</span> Set
+					<code>github</code>, <code>ralph-loop</code>, <code>code-simplifier</code>,
+					<code>claude-md-management</code> to <code>false</code> in
+					<code>settings.json</code>. <b>~38 → ~30 plugin skills.</b>
+				</li>
+				<li>
+					<span class="d-lead">3 · CLAUDE.md rewrite — ~15 min, needs your input.</span> Fix
+					the Pocock block per C7. This is the only change that alters behaviour rather than
+					just removing weight, so it's worth doing carefully rather than fast.
+				</li>
+				<li>
+					<span class="d-lead">4 · MCP audit — ~20 min, biggest payoff.</span> Needs your
+					answers on which connectors are load-bearing. Dropping the 7 unauthenticated design
+					servers and one of the three browser stacks is the single largest context reduction
+					available.
+				</li>
+				<li>
+					<span class="d-lead">5 · Disk sweep — ~5 min, do last.</span> Stale scheduled tasks,
+					<code>.bak</code> files, session-env, shell snapshots. Cosmetic but tidy.
+				</li>
+			</ul>
+			<div class="note" data-note-id="summary" data-note-title="Summary — order of operations">
+				<button class="note-toggle" type="button" aria-expanded="false"><span class="dot"></span>Add note</button>
+				<div class="note-body" hidden>
+					<textarea placeholder="Approve, reorder, or veto steps here…"></textarea>
+					<div class="saved-hint">saved</div>
+				</div>
+			</div>
+		</article>
+	</section>
+
+	<footer>
+		<p>
+			Claude Code harness audit · 17 Aug 2026 · 117 model-visible skills across 4 layers ·
+			11 plugins · 15 MCP servers · evidence base 1,551 session transcripts under
+			<code>~/.claude/projects</code>. Nothing has been modified — this is inventory only.
+		</p>
+		<p>
+			Notes are saved in this browser only (localStorage). Use <strong>Copy all notes</strong>
+			to lift your decisions out as Markdown and paste them back into the session.
+		</p>
+	</footer>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(function () {
+	"use strict";
+	var STORE_PREFIX = "harness-audit-2026-08-17:";
+	var notes = Array.prototype.slice.call(document.querySelectorAll(".note"));
+
+	function keyFor(id) { return STORE_PREFIX + id; }
+
+	function showToast(message) {
+		var el = document.getElementById("toast");
+		el.textContent = message;
+		el.classList.add("show");
+		window.clearTimeout(showToast._t);
+		showToast._t = window.setTimeout(function () { el.classList.remove("show"); }, 2200);
+	}
+
+	function refreshCount() {
+		var filled = notes.filter(function (n) {
+			var ta = n.querySelector("textarea");
+			return ta && ta.value.trim().length > 0;
+		}).length;
+		var counter = document.getElementById("noteCount");
+		counter.innerHTML = "<b>" + filled + "</b> note" + (filled === 1 ? "" : "s");
+	}
+
+	function wireNote(note) {
+		var id = note.getAttribute("data-note-id");
+		var toggle = note.querySelector(".note-toggle");
+		var body = note.querySelector(".note-body");
+		var textarea = note.querySelector("textarea");
+		var hint = note.querySelector(".saved-hint");
+		if (!id || !toggle || !body || !textarea) return;
+
+		// Restore saved value.
+		var saved = "";
+		try { saved = window.localStorage.getItem(keyFor(id)) || ""; } catch (e) { saved = ""; }
+		textarea.value = saved;
+		var hasContent = saved.trim().length > 0;
+		note.classList.toggle("has-content", hasContent);
+		// Auto-open if a note already exists.
+		if (hasContent) {
+			body.hidden = false;
+			toggle.setAttribute("aria-expanded", "true");
+		}
+
+		toggle.addEventListener("click", function () {
+			var open = body.hidden;
+			body.hidden = !open;
+			toggle.setAttribute("aria-expanded", open ? "true" : "false");
+			if (open) { textarea.focus(); }
+		});
+
+		var saveTimer = null;
+		textarea.addEventListener("input", function () {
+			var val = textarea.value;
+			note.classList.toggle("has-content", val.trim().length > 0);
+			refreshCount();
+			window.clearTimeout(saveTimer);
+			saveTimer = window.setTimeout(function () {
+				try {
+					if (val.trim().length > 0) {
+						window.localStorage.setItem(keyFor(id), val);
+					} else {
+						window.localStorage.removeItem(keyFor(id));
+					}
+					if (hint) {
+						hint.classList.add("show");
+						window.setTimeout(function () { hint.classList.remove("show"); }, 1100);
+					}
+				} catch (e) { /* storage unavailable — notes stay in-memory only */ }
+			}, 350);
+		});
+	}
+
+	notes.forEach(wireNote);
+	refreshCount();
+
+	// ── Copy all notes ──
+	document.getElementById("copyAll").addEventListener("click", function () {
+		var lines = ["# Harness Audit Notes", ""];
+		var any = false;
+		notes.forEach(function (n) {
+			var ta = n.querySelector("textarea");
+			if (!ta || ta.value.trim().length === 0) return;
+			any = true;
+			var title = n.getAttribute("data-note-title") || n.getAttribute("data-note-id") || "Note";
+			lines.push("## " + title);
+			lines.push(ta.value.trim());
+			lines.push("");
+		});
+		if (!any) { showToast("No notes yet — nothing to copy."); return; }
+		var text = lines.join("\n");
+
+		function fallbackCopy() {
+			var tmp = document.createElement("textarea");
+			tmp.value = text;
+			tmp.style.position = "fixed";
+			tmp.style.opacity = "0";
+			document.body.appendChild(tmp);
+			tmp.select();
+			try { document.execCommand("copy"); } catch (e) { /* ignore */ }
+			document.body.removeChild(tmp);
+		}
+
+		var count = lines.filter(function (l) { return l.indexOf("## ") === 0; }).length;
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(text).then(
+				function () { showToast("Copied " + count + " note" + (count === 1 ? "" : "s") + " to clipboard."); },
+				function () { fallbackCopy(); showToast("Copied " + count + " note" + (count === 1 ? "" : "s") + "."); }
+			);
+		} else {
+			fallbackCopy();
+			showToast("Copied " + count + " note" + (count === 1 ? "" : "s") + ".");
+		}
+	});
+
+	// ── Clear all (two-click arm/confirm — no blocking dialog) ──
+	var clearBtn = document.getElementById("clearAll");
+	var armed = false;
+	var armTimer = null;
+	clearBtn.addEventListener("click", function () {
+		if (!armed) {
+			armed = true;
+			clearBtn.textContent = "Confirm clear";
+			clearBtn.classList.add("is-armed");
+			armTimer = window.setTimeout(function () {
+				armed = false;
+				clearBtn.textContent = "Clear all";
+				clearBtn.classList.remove("is-armed");
+			}, 3500);
+			return;
+		}
+		window.clearTimeout(armTimer);
+		armed = false;
+		clearBtn.textContent = "Clear all";
+		clearBtn.classList.remove("is-armed");
+		notes.forEach(function (n) {
+			var ta = n.querySelector("textarea");
+			var id = n.getAttribute("data-note-id");
+			if (ta) { ta.value = ""; }
+			n.classList.remove("has-content");
+			try { window.localStorage.removeItem(keyFor(id)); } catch (e) { /* ignore */ }
+		});
+		refreshCount();
+		showToast("All notes cleared.");
+	});
+})();
+</script>
+
+</body>
+</html>

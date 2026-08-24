@@ -1,0 +1,347 @@
+<meta charset="utf-8">
+<title>Fundamentals in the Agent Era</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #FAFAF7;
+  --ink: #20221F;
+  --muted: #5F635C;
+  --faint: #E3E3DC;
+  --code-bg: #EEEEE7;
+  --bob: #7A2E2E;
+  --matt: #2E5E7A;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181A;
+    --ink: #E8E8E5;
+    --muted: #9C9F99;
+    --faint: #2D2F33;
+    --code-bg: #25272B;
+    --bob: #D08770;
+    --matt: #7FB2D0;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17181A;
+  --ink: #E8E8E5;
+  --muted: #9C9F99;
+  --faint: #2D2F33;
+  --code-bg: #25272B;
+  --bob: #D08770;
+  --matt: #7FB2D0;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.62;
+  margin: 0;
+}
+main { max-width: 840px; margin: 0 auto; padding: 0 32px 96px; }
+h1, h2 { font-family: "Fraunces", Georgia, serif; text-wrap: balance; }
+h1 { font-size: clamp(2.3rem, 6vw, 3.4rem); font-weight: 700; line-height: 1.06; letter-spacing: -0.01em; margin: 0 0 20px; }
+h2 { font-size: 1.65rem; font-weight: 700; margin: 0 0 18px; }
+p { max-width: 68ch; margin: 0 0 16px; }
+.mono, .t { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; }
+.t { font-size: 0.75rem; color: var(--muted); }
+code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+header { padding: 84px 0 12px; }
+.eyebrow { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 16px; }
+.lede { font-size: 1.2rem; line-height: 1.55; color: var(--muted); max-width: 58ch; }
+.meta { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.78rem; color: var(--muted); margin-top: 24px; }
+.video { position: relative; margin-top: 36px; aspect-ratio: 16 / 9; width: 100%; background: var(--code-bg); }
+.video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.video-card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px; text-decoration: none; color: var(--ink); }
+.video-card .play { font-family: "Fraunces", Georgia, serif; font-size: 2.2rem; font-weight: 700; line-height: 1; }
+.video-card .vt { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.8rem; color: var(--muted); max-width: 46ch; }
+.video-card .vl { font-size: 0.9rem; font-weight: 600; border-bottom: 1px solid var(--ink); padding-bottom: 1px; }
+.who { font-weight: 700; }
+.who.bob { color: var(--bob); }
+.who.matt { color: var(--matt); }
+section { padding: 64px 0 0; }
+.skim { padding-top: 52px; }
+.skim-h { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.72rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 44px 0 14px; }
+.skim-h:first-of-type { margin-top: 8px; }
+.canon-note { font-size: 0.85rem; color: var(--muted); margin-top: 16px; max-width: 62ch; }
+.creds { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; }
+.creds li { padding: 8px 0; border-top: 1px solid var(--faint); font-size: 0.92rem; }
+.creds li span { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.75rem; color: var(--muted); display: block; }
+@media (max-width: 680px) { .creds { grid-template-columns: 1fr; } }
+.skim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 44px; margin-top: 8px; }
+.skim-grid p { margin: 0; max-width: none; font-size: 0.98rem; line-height: 1.5; }
+.skim-grid strong { font-weight: 700; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin: 52px 0 0; }
+.stats .n { font-family: "Fraunces", Georgia, serif; font-size: 2.7rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.stats .d { font-size: 0.85rem; color: var(--muted); margin-top: 7px; max-width: 24ch; }
+.pipe-wrap { overflow-x: auto; margin: 56px 0 0; }
+.pipe-wrap svg { min-width: 700px; display: block; width: 100%; height: auto; }
+.pipe-cap { font-size: 0.85rem; color: var(--muted); margin-top: 10px; max-width: 62ch; }
+.canon { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 40px; margin-top: 52px; }
+.canon h3 { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.72rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+.canon ul { list-style: none; margin: 0; padding: 0; }
+.canon li { padding: 8px 0; border-top: 1px solid var(--faint); font-size: 0.92rem; line-height: 1.45; }
+.deep-mark { margin-top: 76px; padding-top: 20px; border-top: 1px solid var(--faint); }
+@media (max-width: 680px) {
+  .skim-grid, .stats, .canon { grid-template-columns: 1fr; }
+  .stats { gap: 24px; }
+  .canon { gap: 28px 0; }
+}
+ul.tk { list-style: none; margin: 0; padding: 0; }
+ul.tk li { padding: 16px 0; border-top: 1px solid var(--faint); max-width: 70ch; }
+ul.tk li:first-child { border-top: none; padding-top: 4px; }
+ul.tk p { margin: 0; font-size: 1rem; }
+blockquote {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 28px 0 8px;
+  padding: 0;
+  max-width: 30ch;
+  text-wrap: balance;
+}
+blockquote .who { display: block; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.72rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 12px; }
+.split li { border-left: 3px solid var(--faint); border-top: none; padding: 10px 0 10px 20px; margin-bottom: 14px; }
+.split li:first-child { padding-top: 10px; }
+ol.actions { list-style: none; counter-reset: n; margin: 8px 0 0; padding: 0; }
+ol.actions li { counter-increment: n; display: grid; grid-template-columns: 52px 1fr; gap: 0 16px; padding: 16px 0; border-top: 1px solid var(--faint); max-width: 74ch; }
+ol.actions li::before { content: counter(n); font-family: "Fraunces", Georgia, serif; font-weight: 700; font-size: 1.5rem; color: var(--muted); line-height: 1.1; }
+ol.actions li:first-child { border-top: none; }
+ol.actions p { margin: 0; font-size: 1rem; }
+ol.actions strong { display: block; margin-bottom: 2px; }
+footer { margin-top: 88px; padding-top: 22px; border-top: 1px solid var(--faint); font-size: 0.85rem; color: var(--muted); }
+footer p { margin-bottom: 6px; max-width: none; }
+</style>
+
+<main>
+<header>
+  <p class="eyebrow">Video briefing · watched for you · Aug 20, 2026</p>
+  <h1>Fundamentals in the Agent Era</h1>
+  <p class="lede">Uncle Bob, live with Matt Pocock, on what survives from the Clean Code canon when agents write the code — and what he has publicly abandoned.</p>
+  <p class="meta">"LIVE: Uncle Bob on Software Fundamentals in the Age of AI" · youtube.com/watch?v=zcLPGC-tvgk · 56 min · streamed Aug 19, 2026 · ~34K views in 24h</p>
+  <div class="video">
+    <a class="video-card" href="https://www.youtube.com/watch?v=zcLPGC-tvgk" target="_blank" rel="noopener">
+      <span class="play">▶</span>
+      <span class="vt">The embedded player is blocked in this viewer.</span>
+      <span class="vl">Watch on YouTube — youtube.com/watch?v=zcLPGC-tvgk</span>
+    </a>
+    <iframe src="https://www.youtube-nocookie.com/embed/zcLPGC-tvgk" title="LIVE: Uncle Bob on Software Fundamentals in the Age of AI" allow="encrypted-media; picture-in-picture; fullscreen" loading="lazy" referrerpolicy="no-referrer"></iframe>
+  </div>
+</header>
+
+<section class="skim">
+  <h2>The 60-second version</h2>
+  <p>Cross-referenced against your own takeaways: first what they didn't cover, then your points with the precision the conversation actually had.</p>
+
+  <h3 class="skim-h">What your notes didn't catch</h3>
+  <div class="skim-grid">
+    <p><strong>Bob never reads agent code.</strong> Quality is verified via CRAP-score trends, spot checks, and test batteries — line-by-line review would re-impose human speed.</p>
+    <p><strong>Honest math: 4–5× a human. Not 50×.</strong> The lone agent's 5-minute botch becomes the pipeline's careful hour; the overhead buys the quality.</p>
+    <p><strong>Architecture stays human.</strong> Agent answers about module structure "scared him to death"; Bob hand-designs partitions and enforces them with a dependency checker.</p>
+    <p><strong>Upfront plans are waterfall reborn.</strong> The cost of change has collapsed to near zero — work story-by-story and re-plan between stories.</p>
+    <p><strong>The pipeline is contested, not consensus.</strong> Matt endorses only a narrow implementer/reviewer pair. And don't download Bob's tools — point agents at them and build stack-specific versions.</p>
+    <p><strong>The senior's new job is spotting thrash</strong> — a pattern only ex-coders recognize. Juniors still code for a year, then work inside the same gates as the agents.</p>
+  </div>
+
+  <h3 class="skim-h">Your notes, sharpened</h3>
+  <div class="skim-grid">
+    <p><strong>Short agents are about context, not trust.</strong> Trajectory contamination drives the born-works-dies design; trust is solved separately by deterministic gates — Bob happily runs 30-minute unattended mutation loops because a tool, not a prompt, judges the result.</p>
+    <p><strong>Prompts decay, gates don't.</strong> 10-page steering prompts get treated "in the Pirates of the Caribbean sense"; cut CLAUDE.md to the minimum and pair each cut rule with a mechanical check.</p>
+    <p><strong>Specifier → coder → cleaner → hardener → QA.</strong> "Cleaner" (CRAP + tidy), not beautifier — diagram below.</p>
+    <p><strong>CRAP = cyclomatic complexity × test coverage.</strong> Only at 100% coverage does the score collapse to pure complexity. Mutation testing is a second, separate gate — zero survivors allowed.</p>
+    <p><strong>TDD: drop the ceremony, keep the values — enforced hard.</strong> Red-green micro-stepping goes; coverage and dead mutants stay merciless in the hardener. The short-term-memory rationale is Matt's reframe, which Bob accepted.</p>
+    <p><strong>"Don't impose human disciplines; do impose human values."</strong> Bob's exact framing — not "throw away": disciplines stay valid for humans, and "the rules you throw away are the ones you're going to pick up off the floor."</p>
+    <p><strong><em>Persisted</em> specs fail; ephemeral specs thrive.</strong> "The end result <em>is</em> the specification" — Bob's own specifier still writes Gherkin + a QA doc for every task; durability lives in executable artifacts.</p>
+    <p><strong>Fundamentals organize complexity — for models too.</strong> "Models are modeled after humans" is the load-bearing extension of the thesis, not a footnote.</p>
+    <p><strong>Agents read everything; humans read nothing agents write.</strong> The remedy your note dropped: stop producing prose for humans — encode durability in tests, Gherkin, QA scripts, dependency rules.</p>
+  </div>
+
+  <div class="stats">
+    <div><div class="n">4–5×</div><div class="d">real productivity vs. a human — not the 50× hype</div></div>
+    <div><div class="n">6–8</div><div class="d">cyclomatic complexity per function for agents (humans: below 4) — at 100% coverage the CRAP score <em>is</em> this number</div></div>
+    <div><div class="n">0</div><div class="d">mutants allowed to survive mutation testing</div></div>
+  </div>
+
+  <div class="pipe-wrap">
+    <svg viewBox="0 0 760 168" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bob's five-stage agent pipeline: specifier, coder, cleaner, hardener, QA">
+      <line x1="70" y1="86" x2="690" y2="86" stroke="var(--faint)" stroke-width="2"/>
+      <path d="M144 80 l10 6 -10 6" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+      <path d="M299 80 l10 6 -10 6" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+      <path d="M454 80 l10 6 -10 6" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+      <path d="M609 80 l10 6 -10 6" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+      <circle cx="70" cy="86" r="8" fill="var(--bg)" stroke="var(--ink)" stroke-width="2"/>
+      <circle cx="225" cy="86" r="8" fill="var(--bg)" stroke="var(--ink)" stroke-width="2"/>
+      <circle cx="380" cy="86" r="8" fill="var(--ink)" stroke="var(--ink)" stroke-width="2"/>
+      <circle cx="535" cy="86" r="8" fill="var(--ink)" stroke="var(--ink)" stroke-width="2"/>
+      <circle cx="690" cy="86" r="8" fill="var(--ink)" stroke="var(--ink)" stroke-width="2"/>
+      <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="13" font-weight="500" fill="var(--ink)" text-anchor="middle">
+        <text x="70" y="58">specifier</text>
+        <text x="225" y="58">coder</text>
+        <text x="380" y="58">cleaner</text>
+        <text x="535" y="58">hardener</text>
+        <text x="690" y="58">QA</text>
+      </g>
+      <g font-family="Hanken Grotesk, system-ui, sans-serif" font-size="12" fill="var(--muted)" text-anchor="middle">
+        <text x="70" y="116">Gherkin tests</text>
+        <text x="70" y="132">+ QA doc</text>
+        <text x="225" y="116">writes the</text>
+        <text x="225" y="132">code</text>
+        <text x="380" y="116">CRAP score,</text>
+        <text x="380" y="132">tidy-up</text>
+        <text x="535" y="116">mutation tests,</text>
+        <text x="535" y="132">100% coverage</text>
+        <text x="690" y="116">executable</text>
+        <text x="690" y="132">QA script</text>
+      </g>
+      <circle cx="70" cy="158" r="5" fill="var(--ink)"/>
+      <text x="84" y="162" font-family="Hanken Grotesk, system-ui, sans-serif" font-size="12" fill="var(--muted)">deterministic gate — the agent loops until the tool passes</text>
+    </svg>
+    <p class="pipe-cap">Each agent is born, does one job, and dies — so every stage starts with a clean context, and no earlier trajectory contaminates the next step. A task this pipeline finishes in ~1 hour takes a lone agent 5 botched minutes or a human half a day. This is Bob's setup, not consensus — Matt endorses only a narrow implementer/reviewer pair.</p>
+  </div>
+
+  <div class="canon">
+    <div>
+      <h3>Kept</h3>
+      <ul>
+        <li>Cleanup between every task</li>
+        <li>Deep modules, small interfaces</li>
+        <li>Full coverage, tests as docs</li>
+        <li>Human-designed architecture</li>
+        <li>Agile iteration, small stories</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Loosened</h3>
+      <ul>
+        <li>Complexity limit: 4 → 6–8</li>
+        <li>TDD ceremony → TDD values</li>
+        <li>Line-by-line review → gates + spot checks</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Dropped</h3>
+      <ul>
+        <li>Long steering prompts</li>
+        <li>Heavy upfront plans</li>
+        <li>Persisted prose specs (ephemeral Gherkin stays)</li>
+        <li>Reading agent code</li>
+        <li>Downloading Bob's tools — build your own</li>
+      </ul>
+    </div>
+  </div>
+  <p class="canon-note">And on dropping anything: "the rules you throw away are the ones you're going to pick up off the floor." — Bob</p>
+</section>
+
+<section>
+  <h2>Why Bob's word carries weight</h2>
+  <p>Robert C. Martin didn't just follow the discipline this conversation dismantles — he wrote it. He has been shipping software since 1970, and for the last quarter-century he has been the industry's loudest advocate of exactly the practices he now reports abandoning.</p>
+  <ul class="creds">
+    <li>Author, <em>Clean Code</em> (2008) &amp; <em>Clean Architecture</em> (2017)<span>the canon most teams' review standards descend from</span></li>
+    <li>Co-author of the Agile Manifesto (2001)<span>and first chairman of the Agile Alliance</span></li>
+    <li>Assembled the SOLID principles<span>the default vocabulary for OO design quality</span></li>
+    <li>55+ years writing production software<span>still coding daily — the agent pipeline here is his own, running now</span></li>
+  </ul>
+  <p>That's why this stream matters: it isn't a pundit's hot take, it's a costly reversal. The man who spent decades selling TDD ceremony, tight complexity limits, and line-by-line craftsmanship is the one reporting — from his own running experiments, with numbers — which parts don't survive contact with agents and which parts matter more than ever. When the author of the canon prunes the canon, that's data, not fashion.</p>
+</section>
+
+<section class="deep-mark">
+  <p class="eyebrow">The full briefing — attributed &amp; timestamped, for the deeper dive</p>
+  <h2>The whole conversation in one paragraph</h2>
+  <p>Robert C. Martin argues that software fundamentals survive the agent era but their <em>enforcement mechanisms</em> don't: clean code still matters because agents choke on mess just as humans do, yet prompt-based steering (long CLAUDE.md files) decays as context grows. So Bob has moved nearly all quality enforcement into deterministic post-hoc gates — CRAP complexity-×-coverage scoring, mutation testing, dependency checkers — run by a five-stage pipeline of ephemeral single-purpose agents (specifier → coder → cleaner → hardener → QA), with the radical goal of <em>never reading agent code at all</em>. He retunes his own canon on the way: strict TDD is a human-wiring discipline agents shouldn't be forced into (the values — full coverage, every mutant killed — transfer intact), complexity thresholds loosen from 4 to 6–8, upfront planning with agents fails like 1970s waterfall because the cost of change has collapsed, and persisted spec-driven development "probably won't work" since the end result <em>is</em> the specification. Humans stay irreplaceable for architecture, for recognizing agent thrash, and for growing juniors — who should be "treated like an agent" but still write code for a year first. <span class="who matt">Matt</span> supplies the mechanistic framing — lost-in-the-middle, context trajectory, TDD as memory compensation — and pushes back on multi-agent scale and on eliminating human review.</p>
+</section>
+
+<section>
+  <h2>Clean code survives — with a new justification</h2>
+  <ul class="tk">
+    <li><p><span class="who bob">Bob</span> <span class="t">09:55–12:11</span> — Agents degrade on messy code the way humans do. When he skipped cleanup between tasks, the agent slowed, fell into change-one-thing-break-another loops, and one effectively gave up ("I just can't deal with this anymore"). Cleanup stays mandatory between tasks; the payoff is now <em>agent throughput</em>, not just human readability.</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">28:20–31:25</span> — Prompted by Matt raising Ousterhout: deep modules (small interface, much hidden) are agent-friendly for the same reason they're human-friendly. Models compartmentalize, read a small interface without the implementation, and "read tests to understand what the system does" — tests are documentation agents actually consume.</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">52:54–56:39</span> — Closing argument: software is the most complicated thing humans attempt, and fundamentals are how that complexity gets organized so it can be conceived at all — by humans and by models, "since models are modeled after humans." Every abstraction jump produced the same job-death predictions and the same outcome.</p></li>
+  </ul>
+  <blockquote>"The rules you throw away are the ones you're going to pick up off the floor."<span class="who bob">— Bob</span></blockquote>
+</section>
+
+<section>
+  <h2>Steering prompts fail; deterministic gates are the new enforcement layer</h2>
+  <ul class="tk">
+    <li><p><span class="who bob">Bob</span> <span class="t">12:11–15:15</span> — His 5–10-page prompts on TDD and clean code were treated "in the Pirates of the Caribbean sense" — as guidelines. <span class="who matt">Matt</span> names the mechanism: lost-in-the-middle pushes a long opening prompt into the ignored middle as context grows. Prescription: trim the standing prompt to the minimum and enforce quality with deterministic tools applied after the fact — they never fade from context.</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">05:30–08:30</span> — CRAP scoring and mutation testing existed circa 2000 but were shelved as impractical. Agents changed the economics: mutation testing now runs in ~30 minutes because "these guys are fast and they don't care how boring the work is." The loop is "change the code until this tool says it's okay"; a surviving mutant "must be killed."</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">08:30–09:55</span> — The most radical update from the author of <em>Clean Code</em>: his goal is to never look at the code at all — verify indirectly through CRAP-score trends, spot checks, and test batteries, because line-by-line human review re-imposes human speed on the pipeline.</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">15:16–17:40</span> — Professionalism now means deliberately spending raw agent speed on quality. A too-much point must exist (if gates push agents below human speed "you've lost the game"), but he hasn't found it and keeps a 2–4× margin over a human.</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">41:36–44:53</span> — On his published tools: "don't download those. I wrote them for me." Point your agents at a reference implementation and have them build a version tuned to your stack — bespoke internal tooling is now a small agent task, not an infrastructure project.</p></li>
+  </ul>
+  <blockquote>"I am not going to impose my slowness upon them."<span class="who bob">— Bob</span></blockquote>
+</section>
+
+<section>
+  <h2>Context is the scarce resource</h2>
+  <ul class="tk">
+    <li><p><span class="who bob">Bob</span> &amp; <span class="who matt">Matt</span> <span class="t">23:00–25:26</span> — Anything entering a session's context steers everything after it. Matt names it <em>trajectory</em>; Bob illustrates with the coffee/soap-opera story — one overheard irrelevance permanently contaminates the conversation because the model can't differentiate. Only clearing the context clears the trajectory.</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">19:17–23:00</span> — His pipeline is single-purpose <em>ephemeral</em> agents: specifier (Gherkin acceptance tests + human-viewpoint QA doc) → coder → cleaner (CRAP + tidy) → hardener (mutation testing, 100% coverage, "absolutely merciless") → QA (turns the QA doc into an executable script). Each agent is born, works, dies — so each gets a clean context.</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">19:17–23:00</span> — The honest economics: a task a lone agent botches in 5 minutes takes the pipeline ~1 hour, versus a human half-day. Roughly 4–5× productivity, not 50× — with far higher quality. The overhead is an investment in the codebase.</p></li>
+  </ul>
+</section>
+
+<section>
+  <h2>Disciplines are human wiring; values transfer</h2>
+  <ul class="tk">
+    <li><p><span class="who bob">Bob</span> <span class="t">31:30–35:45</span> — The biggest TDD advocate alive now says forcing strict red-green-refactor micro-stepping on agents is a mistake: they always fall back to write-function-then-test even when ordered otherwise, and he lets them. The values behind TDD — tests exist, coverage complete, mutants dead — transfer fully; the ceremony does not.</p></li>
+    <li><p><span class="who matt">Matt</span> <span class="t">31:30–35:45</span> — Reframes why: TDD compensated for tiny human short-term memory; agents have huge, accurate short-term memory, so the compensation is unnecessary. Bob accepts the framing.</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">31:30–35:45</span> — Clean Code's numeric thresholds loosen for agents: per-function complexity from below 4 (humans) to 6, maybe 8 — with 100% coverage, a score of 6 means six tested pathways. He debates thresholds with the agents themselves, "but you can't trust any debate you have with an agent."</p></li>
+  </ul>
+  <blockquote>"It's probably a mistake to impose a human discipline on an agent… It is not a mistake to impose human values on the agent."<span class="who bob">— Bob</span></blockquote>
+</section>
+
+<section>
+  <h2>Architecture and planning stay human — agile beats waterfall again</h2>
+  <ul class="tk">
+    <li><p><span class="who bob">Bob</span> <span class="t">25:26–28:20</span> — Interrogating agents about module structure "scared [him] to death because the answers were horribly frightening." He hand-designs module partitions and enforces them with two agent-built tools: a drillable architecture viewer and a deterministic dependency checker driven by a spec file declaring which modules may depend on which. Automating the architecture step itself: "not a lot of luck so far."</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">35:46–41:36</span> — Heavy upfront planning with agents is the 1970s waterfall temptation reborn, and it fails the same way: "the agents love to write plans," but plans never anticipate everything and agents run half-cocked off them. He tried it "just this week" — always a disaster. Work story-by-story, inspect, reorganize, repeat.</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">35:46–41:36</span> — The economics inverted: "the cost of change has plummeted to as close to zero," so his house-building parable flips — at $1 per change you'd skip the architect and iterate with the contractor. The <em>plan</em>, not the change, is now the expensive part.</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">41:36–44:53</span> — Persisted spec-driven development is "probably not going to work": specs are ephemeral and the end result <em>is</em> the specification. The asymmetry: agents actually read what you send them (<span class="who matt">Matt</span>: humans absorb ~20% of a big spec), but "the things that the agents write the humans don't read." Durability belongs in executable artifacts — tests, Gherkin, QA scripts, dependency rules — not prose.</p></li>
+  </ul>
+  <blockquote>"Why wouldn't you just fiddle fiddle fiddle fiddle until it looks right?"<span class="who bob">— Bob</span></blockquote>
+</section>
+
+<section>
+  <h2>People: juniors and the senior's irreplaceable eye</h2>
+  <ul class="tk">
+    <li><p><span class="who bob">Bob</span> <span class="t">44:53–52:52</span> — Juniors still acquire fundamentals the hard way: write code for about a year, spend a weekend in assembly so nothing below is magic, read the old canon — then be "treated like an agent": same tasks, same deterministic gauntlet, months of low productivity as tuition, until trusted to run an agent of their own.</p></li>
+    <li><p><span class="who bob">Bob</span> <span class="t">44:53–52:52</span> — How he knew his December agents were failing: not by reading the messy code but by recognizing the thrash pattern — "I recognized the struggle since I have been through that struggle." A novice cannot see it. Supervision in an agent-heavy org is pattern recognition built only from firsthand coding.</p></li>
+    <li><p><span class="who bob">Bob</span> &amp; <span class="who matt">Matt</span> <span class="t">44:53–52:52</span> — Agents are tactically strong, strategically weak; strategy is the scarce human skill. Those who think fundamentals don't matter "will learn the hard way, and it won't take very long."</p></li>
+  </ul>
+  <blockquote>"You become a sub-agent of the agent. I like that."<span class="who matt">— Matt, on juniors in the gauntlet</span></blockquote>
+</section>
+
+<section>
+  <h2>Where Bob and Matt actually split</h2>
+  <ul class="tk split">
+    <li><p><strong>Human review.</strong> <span class="who bob">Bob</span> wants zero human eyes on agent code — gates replace review. <span class="who matt">Matt</span> keeps human-readable review central, endorsing an agent reviewer only as an adjunct. Papered over by Bob's spot checks, never argued to agreement — and Bob only trusts his position because his gauntlet is unusually thick.</p></li>
+    <li><p><strong>Multi-agent scale.</strong> <span class="who matt">Matt</span> is suspicious of the "100 agents with their own email accounts" crowd; he carves out only an implementer/reviewer pair. <span class="who bob">Bob</span> runs a five-stage pipeline and defends the handoff overhead as still "faster by a large token than a human."</p></li>
+    <li><p><strong>Steering vs. determinism.</strong> <span class="who matt">Matt</span>'s world — and most skills-based workflows — leans on rich CLAUDE.md steering; <span class="who bob">Bob</span> has largely abandoned steering for minimal prompts plus deterministic loops. Matt partially reconciles: a reviewer agent can carry more steering because its task is narrower. The default postures genuinely differ.</p></li>
+    <li><p><strong>Spec persistence.</strong> <span class="who matt">Matt</span> asks whether specs are persisted and returned to; <span class="who bob">Bob</span> rejects the premise — the end result is the specification. Partly talking past each other: Matt means workflow artifacts, Bob means durable system truth.</p></li>
+    <li><p><strong>Limits of checking.</strong> <span class="who matt">Matt</span> probes whether gates can over-constrain the agent; <span class="who bob">Bob</span> concedes a too-much point must exist but keeps adding gates. Unresolved.</p></li>
+    <li><p><strong>From the audience, not the room.</strong> The sharpest pushback (commenter @bhh1988): if Bob's setup maintains fundamentals automatically, do engineers still need them in their heads — the way GC replaced manual memory management? Today's need may mostly reflect context-window limits that could go away.</p></li>
+  </ul>
+</section>
+
+<section>
+  <h2>What this means for a team like ours</h2>
+  <p>We already run interview-first planning, spec → tickets → implement, TDD, and two-axis code review. This conversation confirms some of it and challenges the rest.</p>
+  <ol class="actions">
+    <li><div><p><strong>Slim the steering layer.</strong> Audit skill files and CLAUDE.md for encyclopedic rules; cut to the minimum, and pair each cut rule with a mechanical check (linter, coverage gate, custom analyzer) that enforces it after the fact. Long standing prompts decay; gates don't.</p></div></li>
+    <li><div><p><strong>Add a mutation-testing + complexity gate</strong> as a required agent-run loop — "change the code until the tool says okay" — not a human chore. Build it bespoke: point agents at Bob's published tools as reference and generate a stack-specific version.</p></div></li>
+    <li><div><p><strong>Make architecture a human deliverable with machine enforcement.</strong> A per-repo dependency-rules spec file plus a checker that fails the build on violations. Don't delegate module partitioning to agents.</p></div></li>
+    <li><div><p><strong>Retune the TDD skill to enforce outcomes, not ceremony.</strong> Tests exist, coverage complete, mutants dead — but stop forcing red-green micro-stepping on agents, and consider relaxing per-function complexity thresholds where coverage is total.</p></div></li>
+    <li><div><p><strong>Treat specs as disposable inputs.</strong> Keep tickets small, re-plan between them, and invest durability in executable artifacts — acceptance tests, QA scripts, dependency rules — instead of prose nobody reads.</p></div></li>
+    <li><div><p><strong>Design junior onboarding as gauntlet-first apprenticeship.</strong> A real year of hands-on coding, then months inside the same pipeline and gates as the agents — and keep enough hands-on coding in every engineer's diet that thrash-recognition doesn't atrophy.</p></div></li>
+  </ol>
+</section>
+
+<footer>
+  <p>Sources: full auto-generated caption track (00:00–56:37 of 56:39) pulled via YouTube's caption API and digested into 19 attributed segments; quotes are near-verbatim modulo ASR errors (proper nouns normalized). Two independent analysis passes agreed on substance and attribution. Reception data is thin — top ~20 of 97 comments, ~24h after the stream; no HN/Reddit/X threads existed yet.</p>
+  <p>Confidence: high on claims and disagreements · medium on exact wording · low on broader community reception.</p>
+</footer>
+</main>
