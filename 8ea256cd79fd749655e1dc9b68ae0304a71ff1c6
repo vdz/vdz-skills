@@ -1,0 +1,52 @@
+.gitignore
+  9a64904d2e50dd1c 3
+
+autoresearch/scripts/scorers/skill-lint.mjs
+  9a64904d2e50dd1c 1-166
+
+docs/context-overhaul-plan.html
+  9a64904d2e50dd1c 1-1707
+
+docs/pocock-workflow-policy.md
+  9a64904d2e50dd1c 1-66
+
+docs/reports/2026-06-18-autoresearch-ripe-skills.md
+  9a64904d2e50dd1c 1-124
+
+docs/reports/2026-08-17-harness-audit.html
+  9a64904d2e50dd1c 1-1354
+
+docs/reports/2026-08-19-pocock-loop.html
+  9a64904d2e50dd1c 1-401
+
+docs/reports/2026-08-20-unclebob-fundamentals-agent-era.html
+  9a64904d2e50dd1c 1-347
+
+docs/retired-hyperframes-capability-note.md
+  9a64904d2e50dd1c 1-59
+
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "base_commit_sha": "b9a0241c8ab19964b71371ba8823602b67bd1855",
+  "prompts": {
+    "9a64904d2e50dd1c": {
+      "tool": "claude_code",
+      "id": "c5f0224c-d660-4163-a588-63e9cb86ccc0",
+      "model": "unknown",
+      "author": {
+        "human": "Yehuda Gilead <545253+vdz@users.noreply.github.com>"
+      },
+      "total_additions": 4225,
+      "total_deletions": 0,
+      "sparkey": {
+        "attribution_precision": "commit"
+      }
+    }
+  },
+  "sparkey": {
+    "client_version": ""
+  }
+}
+Sparkey-Session-Id: c5f0224c-d660-4163-a588-63e9cb86ccc0
+Sparkey-Contributor-Uuid: 25f5f227-833d-47fa-9e95-a7511bdf660d
