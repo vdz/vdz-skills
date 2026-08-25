@@ -1,0 +1,28 @@
+docs/reports/2026-08-25-building-ripe-flows-design-rationale.md
+  9a64904d2e50dd1c 1-100
+
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "base_commit_sha": "8ea256cd79fd749655e1dc9b68ae0304a71ff1c6",
+  "prompts": {
+    "9a64904d2e50dd1c": {
+      "tool": "claude_code",
+      "id": "c5f0224c-d660-4163-a588-63e9cb86ccc0",
+      "model": "unknown",
+      "author": {
+        "human": "Yehuda Gilead <545253+vdz@users.noreply.github.com>"
+      },
+      "total_additions": 100,
+      "total_deletions": 0,
+      "sparkey": {
+        "attribution_precision": "commit"
+      }
+    }
+  },
+  "sparkey": {
+    "client_version": ""
+  }
+}
+Sparkey-Session-Id: c5f0224c-d660-4163-a588-63e9cb86ccc0
+Sparkey-Contributor-Uuid: 25f5f227-833d-47fa-9e95-a7511bdf660d
