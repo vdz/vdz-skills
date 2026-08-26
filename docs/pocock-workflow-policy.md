@@ -54,6 +54,17 @@ Agent-facing. Codifies the four main paths, the on-ramps, and the routing rules.
 
 **Hard rule:** never `/clear`/`/compact` between grill-with-docs, to-spec, and to-tickets — one unbroken context.
 
+## Ripe intersection (personal wiring — the public skills stay Pocock-blind)
+
+On a Ripe-architecture repo (ripe-skills family installed):
+
+- `/grill-with-docs` on a Ripe feature **subsumes Step 0** of `creating-a-branch.md` — its output IS the state composition. `/implement` must not re-run Step 0 as an interview; Step 0 becomes a read of the grill's decisions.
+- A tracer-bullet ticket = one Ripe vertical slice, ordered by `building-ripe-store` → The Feature Loop (state → actions → reducer cases → listeners → api → wiring → routes → components → selectors → tests).
+- `/to-spec`'s "sketch testing seams" = pick among Ripe's fixed seams (reducer / listener-harness / selector / component behaviour, per `building-ripe-tests`); the listener/harness seam is the usual single seam.
+- `code-review`'s **Standards** sub-agent on a Ripe repo: run `ripe-audit` (or feed it the audit checklists) instead of generic smells alone. The **Spec** axis stays Pocock's.
+- `diagnosing-bugs` Phase 1 on a Ripe repo = a failing `makeTestHarness` test.
+- Handoffs stay in the OS temp dir (the skill default); `ripe-overview`'s `docs/handoffs/` lane is knowingly empty on these repos — revisit if that starts to hurt (decision 2026-08-26).
+
 ## Known gaps (from the author's own docs)
 
 - `implement` never closes tickets (see Path B step 4).
