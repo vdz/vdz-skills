@@ -1,0 +1,4 @@
+interface:
+  display_name: "Unslop"
+  short_description: "Always remove model residue without flattening voice"
+  default_prompt: "Use $unslop to tighten this writing while preserving its meaning and voice."

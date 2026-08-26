@@ -195,3 +195,106 @@ Use `skill-creator` for variance analysis once manual scenarios all pass. Single
 ## Other skills
 
 > _TODO: add test plans for `regression-dog`, `building-ripe-components`, `building-ripe-routing`, `ripe-init` as needed._
+
+---
+
+## `unslop`
+
+The skill must remove generic model residue without flattening voice, changing claims, or
+enforcing punctuation bans. It must also apply conservatively when the user does not name
+the skill. Seven scenarios test the boundary.
+
+### Setup
+
+- Fresh session with only the `unslop` skill loaded.
+- Ask for the finished rewrite unless a scenario explicitly requests a review.
+- Compare claims, confidence, citations, quotations, language, and formatting before and
+  after. A smoother sentence that changes any of them fails.
+
+### Scenarios
+
+#### 1. Technical prose with legitimate punctuation
+
+> *"Unslop this, but keep my punctuation when it works: The cache is not just a speedup—it
+> serves as a crucial reliability substrate (especially during deploys), ensuring that the
+> system continues to thrive despite upstream challenges. It expires entries after 15
+> minutes; deploys usually finish in six."*
+
+**Tests:** removes the canned contrast, puffery, and superficial participle; keeps either
+the em dash or parentheses when the revision still benefits from them; preserves both
+numbers and does not invent an outage claim.
+
+#### 2. Distinctive personal voice
+
+> *"Humanize this without making me sound corporate: I love this little parser. It is
+> weird in exactly one place, and honestly that weird bit has saved us twice. Don't tidy
+> the joke away. The parser rejects an empty header before it touches the body."*
+
+**Tests:** preserves first person, affection, humor, and the short sentence rhythm; does
+not replace *weird* with formal jargon; preserves the parser behavior.
+
+#### 3. Evidence gap
+
+> *"De-AI this: Experts agree that our groundbreaking workflow significantly improves
+> productivity across the industry."*
+
+**Tests:** does not fabricate a study, percentage, customer, or mechanism. In rewrite
+mode it narrows or removes the unsupported claim; in review mode it identifies the exact
+evidence needed.
+
+#### 4. Clean source
+
+> *"Unslop this: The importer reads one CSV row at a time and writes rejected rows to
+> `errors.csv`."*
+
+**Tests:** returns it unchanged or makes no material edit. The skill does not churn the
+sentence merely to demonstrate activity.
+
+#### 5. Source language and RTL
+
+> *"תעשה unslop, אבל תשמור על העברית ועל הטון שלי: זה לא רק כלי חדשני—זה פתרון משמעותי
+> שמאפשר לנו להעצים את חוויית המשתמש. בפועל, הוא מקצר את פתיחת השיעור משש לחיצות לשתיים."*
+
+**Tests:** keeps the text in Hebrew and preserves the measured six-to-two claim; removes
+or grounds the canned and inflated language; does not translate, anglicize, or damage RTL
+punctuation.
+
+#### 6. Review without rewrite
+
+Give a two-paragraph AI-heavy project update, then ask:
+
+> *"Review this for slop. Don't rewrite it yet."*
+
+**Tests:** returns findings ordered by impact; each finding includes an excerpt,
+diagnosis, and concrete revision; does not silently replace the full draft.
+
+#### 7. Always-on response
+
+Without mentioning `unslop`, ask:
+
+> *"Why does this cache expire entries after 15 minutes? Answer in enough detail for a
+> code review."*
+
+Provide context establishing that 15 minutes bounds stale configuration during deploys.
+
+**Tests:** answers directly without a sycophantic opening, service preface, repeated
+summary, inflated language, or generic sign-off; preserves the requested technical detail
+instead of turning concision into information loss; does not mention that an editorial
+pass occurred.
+
+### Rubric
+
+Score each criterion 0–2 (no / partial / yes):
+
+| Criterion | Where tested |
+|---|---|
+| Claims, certainty, numbers, citations, quotations, and code are preserved | all |
+| Voice, language, dialect, and intentional roughness survive | 1, 2, 5 |
+| Generic residue is removed by cause rather than word substitution | 1, 3, 5 |
+| Punctuation is judged in context, with no blanket ban | 1, 2, 5 |
+| Unsupported specificity is never invented | 1, 3 |
+| Clean prose is not churned | 4 |
+| Rewrite and review output contracts remain distinct | 6 |
+| Always-on cleanup applies without explicit invocation and preserves useful detail | 7 |
+
+**Pass threshold:** every scenario passes, and no scenario scores zero on preservation.

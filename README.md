@@ -49,6 +49,16 @@ A focused reviewer that reads a diff for one thing only: *what might this change
 **Why I need it:** general code review wanders. Sometimes I just want the narrow,
 paranoid pass — regressions, nothing else — before I ship.
 
+### Writing — [`unslop`](unslop/)
+
+An always-on editorial pass that removes generic model residue from user-facing prose
+while preserving facts, language, punctuation, and voice. When given a draft, it can
+rewrite it or diagnose the passages that still sound inflated, canned, or over-structured.
+
+**Why I need it:** AI cleanup often becomes another house style: ban a punctuation mark,
+swap words from a blacklist, and sand away anything distinctive. This skill treats those
+patterns as evidence instead of laws. It tightens the writing without replacing the writer.
+
 ### Teaching — a deliberate trial: [`teaching`](teaching/) · [`teach-me`](teach-me/) · [`teach-me-deeply`](teach-me-deeply/) · [`explain-it-back`](explain-it-back/)
 
 Four overlapping takes on "teach me this." They're here **on purpose** — I'm dogfooding
