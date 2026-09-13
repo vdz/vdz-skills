@@ -1,0 +1,28 @@
+ripe-skills
+  ba2ad9925add7be1 1
+
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "base_commit_sha": "6936f06c1730e54e890c28e81796a3956be40694",
+  "prompts": {
+    "ba2ad9925add7be1": {
+      "tool": "unknown",
+      "id": "eb607a6a-29ac-4c80-b96e-5aeab671ba77",
+      "model": "unknown",
+      "author": {
+        "human": "Yehuda Gilead <545253+vdz@users.noreply.github.com>"
+      },
+      "total_additions": 1,
+      "total_deletions": 1,
+      "sparkey": {
+        "attribution_precision": "commit"
+      }
+    }
+  },
+  "sparkey": {
+    "client_version": ""
+  }
+}
+Sparkey-Session-Id: eb607a6a-29ac-4c80-b96e-5aeab671ba77
+Sparkey-Contributor-Uuid: 25f5f227-833d-47fa-9e95-a7511bdf660d
