@@ -1,0 +1,9 @@
+{
+  "name": "focus-read",
+  "version": "0.1.0",
+  "author": {
+    "name": "Yehuda G"
+  },
+  "description": "Reading focus for assistant replies: replies rest dimmed, hover a paragraph to bring it forward and push the rest further back; /focus or the footer button toggles it",
+  "types": "./types/index.d.ts"
+}
