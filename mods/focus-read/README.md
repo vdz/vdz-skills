@@ -4,6 +4,23 @@ Reading focus for Claude Code replies, iA Writer style. With the mod on, every f
 reply rests dimmed (dim zero). Hover a paragraph and it comes forward at full strength
 while everything else, in every reply, drops further back (deep dim).
 
+## What it looks like
+
+Desktop Code tab, dark appearance.
+
+**Dim zero.** Mode on, nothing hovered: the whole reply rests dimmed.
+
+![A reply at dim zero: every paragraph dimmed evenly](docs/dim-zero.png)
+
+**Deep dim.** The pointer rests on the last paragraph. It comes forward at full strength,
+and the rest of the reply fades further.
+
+![A reply in deep dim: the hovered last paragraph bright, the rest faded](docs/deep-dim.png)
+
+**The toggle.** `◐ reading focus` in the prompt footer turns it on and off.
+
+![The prompt footer with the reading focus toggle](docs/footer.png)
+
 ## Load it
 
 ```bash
