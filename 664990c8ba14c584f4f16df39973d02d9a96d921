@@ -1,0 +1,28 @@
+mods/focus-read/README.md
+  5bf81cb5fe6a7306 7-23
+
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "base_commit_sha": "6a3b6a756aa8c57f307cea63aacae7bacdc75254",
+  "prompts": {
+    "5bf81cb5fe6a7306": {
+      "tool": "claude_code",
+      "id": "924a06fc-1d9f-4f0f-8a02-1e027ed8b51a",
+      "model": "unknown",
+      "author": {
+        "human": "Yehuda Gilead <545253+vdz@users.noreply.github.com>"
+      },
+      "total_additions": 17,
+      "total_deletions": 0,
+      "sparkey": {
+        "attribution_precision": "commit"
+      }
+    }
+  },
+  "sparkey": {
+    "client_version": ""
+  }
+}
+Sparkey-Session-Id: 924a06fc-1d9f-4f0f-8a02-1e027ed8b51a
+Sparkey-Contributor-Uuid: 25f5f227-833d-47fa-9e95-a7511bdf660d
