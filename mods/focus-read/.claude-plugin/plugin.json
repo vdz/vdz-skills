@@ -4,6 +4,6 @@
   "author": {
     "name": "Yehuda G"
   },
-  "description": "Reading focus for assistant replies: replies rest dimmed, hover a paragraph to bring it forward and push the rest further back; /focus or the footer button toggles it",
+  "description": "Reading focus for assistant replies: replies rest dimmed and the paragraph you hover or pin comes forward; four Styles (calm, spotlight, typewriter, solo); /focus or the footer buttons toggle and switch them",
   "types": "./types/index.d.ts"
 }

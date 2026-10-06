@@ -22,7 +22,30 @@ mode.
   exists: further back than Dim zero, so the Focus stands out clearly against it.
 - **Mode** — whether the mod is on or off. Off, every Reply is drawn by the engine as
   usual. Persists across sessions; `/focus` or the **Toggle** flips it.
-- **Toggle** — the one control the mod shows of its own, among the mode labels in the
-  prompt's footer: it names the current Mode and flips it.
+- **Style** — a named set of choices for how Focus and the stepped-back Paragraphs look
+  (how far back they sit, how the Focus stands out, what moves the Focus). Mode says
+  whether the mod acts; Style says how. One Style is current at a time and it persists.
+  _Avoid_: theme (the app's light/dark), look.
+- **Calm**, **Spotlight**, **Typewriter**, **Solo** — the Styles the mod ships. Calm is
+  the default, gentle and hover-driven; Spotlight steps nothing back until a Focus
+  exists; Typewriter is Pinned, with a Highlight and a Gradient within its own Reply;
+  Solo is Pinned and hides everything but the Focus.
+- **Rest level** — how far back Dim zero sits; may be none, in which case nothing steps
+  back until a Focus exists.
+- **Deep level** — how far back Deep dim sits: strong, or hidden. Hidden Paragraphs
+  keep their space, so the transcript never jumps.
+- **Highlight** — a soft tinted background behind the Focus, as a marker would leave. The
+  only place the mod deliberately paints; stepped-back Paragraphs never get one.
+- **Trigger** — what moves the Focus. **Hover**: the pointer resting on a Paragraph.
+  **Pinned**: a click sets the Focus and the keyboard moves or releases it; the pointer
+  alone changes nothing.
+- **Rest delay** — how long the pointer must rest before a Hover moves the Focus.
+- **Gradient** — the Paragraphs next to the Focus sit between it and Deep dim, like the
+  lines around a typewriter's.
+- **Reach** — which Replies Deep dim covers: every Reply, or only the Focus's own (the
+  others stay at Dim zero).
+- **Toggle** — the mod's own controls among the mode labels in the prompt's footer: one
+  names the Mode and flips it; the one beside it names the current Style and moves to
+  the next.
 - **Generating** — the span from a turn's start to its completion. Dim zero, Deep dim and
   Focus all hold while Generating, so earlier Replies stay readable while agents work.

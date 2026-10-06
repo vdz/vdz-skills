@@ -1,33 +1,6 @@
-import { expect, mock, test, type TestBody } from 'claude-code/testing'
+import { expect, test } from 'claude-code/testing'
 
-const REPLY = {
-  component: 'AssistantMessage' as const,
-  props: { text: 'first paragraph\n\nsecond paragraph\n\nthird paragraph', isFirstOfReply: true },
-}
-const SURFACES = ['terminal', 'desktop'] as const
-
-// The test's hooks stand for the engine: answer the command registration and
-// start the session the way the REPL does.
-async function boot($: Parameters<TestBody>[0], on: Parameters<TestBody>[1], entries?: Record<string, unknown>) {
-  mock.clock(on)
-  mock.store(on, entries)
-  on('command.register', (_$, e) => ({ value: { command: e.name } }))
-  on('session.start', (_$, e) => ({ cwd: e.cwd }))
-  on('turn.start', (_$, e) => ({ turnId: e.turnId }))
-  on('turn.complete', () => ({ text: '' }))
-  on('command.run', () => ({ text: '' }))
-  // The engine's own drawing of a reply, for the cases the mod passes through.
-  on('ui.render', { component: 'AssistantMessage' }, ($, e) => {
-    const { Text } = $.ui.resolve(e)
-    return <Text key="engine">{e.props.text}</Text>
-  })
-  await $.session.start({ cwd: '/tmp', surface: 'terminal', isInteractive: true })
-}
-
-const dimsOf = async (ui: { findAll: (q: { type: string }) => Promise<{ props: Record<string, unknown> }[]> }) =>
-  (await ui.findAll({ type: 'Markdown' })).map(m => m.props.dimColor === true)
-const veilsOf = async (ui: { findAll: (q: { type: string }) => Promise<{ props: Record<string, unknown> }[]> }) =>
-  (await ui.findAll({ type: 'Client' })).map(c => (c.props.props as { veil: string }).veil)
+import { boot, dimsOf, REPLY, SURFACES, veilsOf } from './harness'
 
 test('at rest every paragraph of a finished reply is in dim zero', async ($, on) => {
   await boot($, on)
@@ -48,13 +21,14 @@ test('hovering brings one paragraph forward and sends the rest to deep dim', asy
   for (const surface of SURFACES) {
     const ui = await $.ui.mount({ plugin: 'focus-read', surface, requestId: `h-${surface}`, ...REPLY })
     await ui.pointer({ type: 'enter', x: 0, y: 0, in: 'p1' })
-    await ui.advance(100)
+    await ui.advance(200)
     expect(await dimsOf(ui)).toEqual([true, false, true])
     // The veils are the desktop's two steps; the terminal has one dim only.
-    const [zero, deep] = surface === 'desktop' ? ['zero', 'deep'] : ['none', 'none']
-    expect(await veilsOf(ui)).toEqual([deep, 'none', deep])
+    // The bright paragraph gets a soft veil there too, easing full contrast a little.
+    const [zero, deep, soft] = surface === 'desktop' ? ['zero', 'deep', 'soft'] : ['none', 'none', 'none']
+    expect(await veilsOf(ui)).toEqual([deep, soft, deep])
     await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'p1' })
-    await ui.advance(100)
+    await ui.advance(200)
     expect(await dimsOf(ui)).toEqual([true, true, true])
     expect(await veilsOf(ui)).toEqual([zero, zero, zero])
     await ui.unmount()
@@ -66,7 +40,7 @@ test('a focus in one reply sends every other reply to deep dim', async ($, on) =
   const here = await $.ui.mount({ plugin: 'focus-read', surface: 'desktop', requestId: 'x1', ...REPLY })
   const there = await $.ui.mount({ plugin: 'focus-read', surface: 'desktop', requestId: 'x2', ...REPLY })
   await here.pointer({ type: 'enter', x: 0, y: 0, in: 'p0' })
-  await here.advance(100)
+  await here.advance(200)
   expect(await dimsOf(there)).toEqual([true, true, true])
   expect(await veilsOf(there)).toEqual(['deep', 'deep', 'deep'])
   await here.unmount()
@@ -93,7 +67,7 @@ test('while agents work the replies stay dimmed and a focus holds', async ($, on
   expect(await dimsOf(earlier)).toEqual([true, true, true])
   expect(await dimsOf(live)).toEqual([true, true, true])
   await earlier.pointer({ type: 'enter', x: 0, y: 0, in: 'p2' })
-  await earlier.advance(100)
+  await earlier.advance(200)
   expect(await dimsOf(earlier)).toEqual([true, true, false])
   expect(await veilsOf(live)).toEqual(['deep', 'deep', 'deep'])
   await $.turn.complete({ turnId: 't1', answer: '', durationMs: 1, isAborted: false, reason: 'answer' })
@@ -120,22 +94,22 @@ test('a single-paragraph reply is dimmed too', async ($, on) => {
   await one.unmount()
 })
 
-test('/focus toggles and takes on or off; theme names report the one look', async ($, on) => {
+test('/focus toggles and takes on or off; a retired theme name is reported', async ($, on) => {
   await boot($, on)
   const run = (args: string) =>
     $.command.run({ command: 'focus', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 120 } })
   const mount = (requestId: string) => $.ui.mount({ plugin: 'focus-read', surface: 'desktop', requestId, ...REPLY })
 
-  expect((await run('')).text).toBe('off')
+  expect((await run('')).text).toBe('off · calm')
   const off = await mount('t-off')
   expect(await off.find({ type: 'Client' })).toBeUndefined()
   await off.unmount()
 
-  expect((await run('')).text).toBe('on')
-  expect((await run('off')).text).toBe('off')
-  expect((await run('off')).text).toBe('off')
-  expect((await run('on')).text).toBe('on')
-  expect((await run('ink')).text).toMatch(/^on\. One look/)
+  expect((await run('')).text).toBe('on · calm')
+  expect((await run('off')).text).toBe('off · calm')
+  expect((await run('off')).text).toBe('off · calm')
+  expect((await run('on')).text).toBe('on · calm')
+  expect((await run('ink')).text).toMatch(/^"ink" is retired/)
   expect((await run('nope')).text).toMatch(/unknown/i)
   const back = await mount('t-on')
   expect(await back.findAll({ type: 'Client' })).toHaveLength(3)
@@ -148,17 +122,17 @@ test('the footer button toggles the mode and every reply follows', async ($, on)
   await boot($, on)
   const footer = await $.ui.mount({ plugin: 'focus-read', surface: 'desktop', requestId: 'footer', ...FOOTER })
   const reply = await $.ui.mount({ plugin: 'focus-read', surface: 'desktop', requestId: 'b1', ...REPLY })
-  const label = async () => (await footer.find({ type: 'Button' }))?.props.label
+  const label = async () => (await footer.findAll({ type: 'Button' }))[0]?.props.label
   expect(await footer.find({ type: 'Text' })).toBeDefined()
-  expect(await label()).toBe('◐ reading focus')
+  expect(await label()).toBe('◐ focus')
   expect(await reply.findAll({ type: 'Client' })).toHaveLength(3)
 
   await footer.press({ key: 'focus-toggle' })
-  expect(await label()).toBe('○ reading focus')
+  expect(await label()).toBe('○ focus')
   expect(await reply.find({ type: 'Client' })).toBeUndefined()
 
   await footer.press({ key: 'focus-toggle' })
-  expect(await label()).toBe('◐ reading focus')
+  expect(await label()).toBe('◐ focus')
   expect(await reply.findAll({ type: 'Client' })).toHaveLength(3)
   await footer.unmount()
   await reply.unmount()
