@@ -55,8 +55,8 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   // The icon at the pane's right edge shows the rest: padded on its left alone, wide
   // enough to hit, the glyph flush right; no tip, as one would open over it and take the click.
   expect((await pane.find({ key: 'pulse-more' }))?.props.text).toBe('[\u00a0\u00a0\u00a0\u00a0▾](https://pulse.invalid/fold "Show every fact")')
-  // The icon's row spans the pane, less its padding, so the icon sits at the right edge.
-  expect((await pane.findAll({ type: 'Box' })).some(b => b.props.width === 38 && b.props.flexDirection === 'row')).toBe(true)
+  // The icon's row spans the pane, so the icon sits at the right edge.
+  expect((await pane.findAll({ type: 'Box' })).some(b => b.props.width === '100%' && b.props.flexDirection === 'row')).toBe(true)
   // Every control says what it does in a card on hover; no title shows on the desktop.
   const tips = async () => (await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none').map(b => b.text)
   expect(await tips()).toEqual(expect.arrayContaining(['Show every fact', 'Open usage on claude.ai']))

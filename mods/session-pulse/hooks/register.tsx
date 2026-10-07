@@ -425,8 +425,6 @@ export const register: Register = on => {
       </Box>
     )
     const tipScope = (u: Fact) => `pulse-tip-${u.name}`
-    // The pane's width inside its padding: the facts' rows span it, so the icon sits at the edge.
-    const ROW_CELLS = Math.max(e.props.bodyColumns - 2, 20)
     // The facts as two columns, the name quiet and the value plain, each with its hint
     // beneath in the faintest grey (no element sets a smaller size).
     const NAME_CELLS = 9
@@ -440,10 +438,12 @@ export const register: Register = on => {
             {set(p, true)}
           </Box>
         ))}
-        <Box flexDirection="column" marginTop={1}>
+        <Box flexDirection="column" marginTop={1} width="100%">
           {blocks.flatMap((block, at) => block.map((u, index) => (
-            <Box key={`u-${u.name}`} flexDirection="column" marginTop={index === 0 && at > 0 ? 1 : 0}>
-              <Box flexDirection="row" width={ROW_CELLS}>
+            <Box key={`u-${u.name}`} flexDirection="column" marginTop={index === 0 && at > 0 ? 1 : 0} width="100%">
+              {/* Each row spans the pane (the desktop's bodyColumns runs short of it), so
+                  the icon at the end of the first sits at the pane's right edge. */}
+              <Box flexDirection="row" width="100%">
                 <Box width={NAME_CELLS}>
                   <Text {...QUIET}>{u.name}</Text>
                 </Box>
