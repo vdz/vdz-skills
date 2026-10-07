@@ -11,11 +11,12 @@ test('the Pulse line stays in the reply, set muted beneath the rest with faint s
     const ui = await $.ui.mount({ plugin: PLUGIN, surface, requestId: `r-${surface}`, ...message(`Tests are green.\n\n${LINE}`) })
     expect(await ui.find({ type: 'Markdown' })).toBeUndefined()
     expect(await ui.find({ type: 'Text', text: LINE })).toBeTruthy()
-    expect((await ui.find({ type: 'Text', text: /^◂ your move$/ }))?.props.bold).toBe(true)
+    const part = async (text: RegExp) => (await ui.find({ type: 'Text', text }))?.props
+    expect(await part(/^your move$/)).toMatchObject({ bold: true })
+    expect(await part(/^◂ $/)).toMatchObject({ color: 'claude' })
+    expect(await part(/^next: $/)).toMatchObject({ color: 'claude' })
     const dots = await ui.findAll({ type: 'Text', text: /^ · $/ })
-    expect(dots).toHaveLength(2)
-    // The desktop page ignores dimColor on a Text, so there the faint tone is a colour.
-    for (const dot of dots) expect(surface === 'desktop' ? dot.props.color : dot.props.dimColor).toBeTruthy()
+    expect(dots.map(d => d.props.color)).toEqual(['subtle', 'subtle'])
     expect(await ui.find({ type: 'Text', text: /^Tests are green\.$/ })).toBeTruthy()
     await ui.unmount()
   }

@@ -41,18 +41,34 @@ export function footerLabel(line: PulseLine): string {
   return `${GLYPH_OF[line.move]} ${line.move}${step}`
 }
 
-export type Tone = 'strong' | 'plain' | 'faint'
+export type Tone = 'accent' | 'strong' | 'plain' | 'faint'
 export type Part = { text: string; tone: Tone }
 
-// The Pulse line as typeset parts: the Move strong, the Step and Next action plain,
-// the separators and the "next:" faint enough almost to disappear. Joined, the
-// parts read exactly as formatPulse.
+// The Pulse line as typeset parts: the glyph and the "next:" in the accent, the
+// Move strong, the Step and Next action plain, the separators faint enough almost
+// to disappear. Joined, the parts read exactly as formatPulse.
 export function pulseParts(line: PulseLine): Part[] {
-  const parts: Part[] = [{ text: `${GLYPH_OF[line.move]} ${line.move}`, tone: 'strong' }]
+  const parts: Part[] = [
+    { text: `${GLYPH_OF[line.move]} `, tone: 'accent' },
+    { text: line.move, tone: 'strong' },
+  ]
   const gap: Part = { text: ' · ', tone: 'faint' }
   if (line.step) parts.push(gap, { text: `${line.step.n}/${line.step.of}`, tone: 'plain' })
-  if (line.next) parts.push(gap, { text: 'next: ', tone: 'faint' }, { text: line.next, tone: 'plain' })
+  if (line.next) parts.push(gap, { text: 'next: ', tone: 'accent' }, { text: line.next, tone: 'plain' })
   return parts
+}
+
+// A gauge's bar: how many of its cells a percentage fills. Anything above zero
+// shows at least one cell, so a barely used limit still reads as used.
+export function gaugeCells(percent: number, width: number): { filled: number; empty: number } {
+  const share = Math.min(Math.max(percent, 0), 100) / 100
+  const filled = percent > 0 ? Math.max(1, Math.round(share * width)) : 0
+  return { filled, empty: width - filled }
+}
+
+// The theme colour a gauge fills with: calm while there is room, warmer as it runs out.
+export function gaugeColor(percent: number): 'success' | 'warning' | 'error' {
+  return percent >= 85 ? 'error' : percent >= 60 ? 'warning' : 'success'
 }
 
 // The reply with its Pulse line taken off the end, or null when it ends in none.

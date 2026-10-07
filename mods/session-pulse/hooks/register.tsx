@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { ElementConstructor, EngineInterface, Register, TextProps } from 'claude-code'
 
 import type { SessionPulse } from '../types'
-import { footerLabel, formatPulse, parsePulseLine, pulseParts, splitPulseLine } from './pulse'
+import { footerLabel, formatPulse, gaugeCells, gaugeColor, parsePulseLine, pulseParts, splitPulseLine } from './pulse'
 import type { Part, Tone } from './pulse'
 
 const COMMAND = 'pulse'
@@ -68,30 +68,33 @@ const describe = (p: SessionPulse) =>
 async function report($: EngineInterface) {
   const current = await read($, pulse)
   const before = earlier(current, await read($, history))
-  const gauges = await meters($)
+  const usage = await meters($)
   return [
     current === null ? 'No Pulse yet.' : describe(current),
     ...(before.length === 0 ? [] : ['', 'Earlier:', ...before.map(p => `  ${formatPulse(p)}`)]),
-    ...(gauges === '' ? [] : ['', gauges]),
+    ...(usage === '' ? [] : ['', usage]),
   ].join('\n')
 }
 
 const PANE = 'session-pulse'
 
-// The desktop page ignores a Text's dimColor but honours its color, so there the
-// tones are translucent greys that read on a light page and a dark one alike.
-const MUTED = 'rgba(128, 128, 128, 0.9)'
-const FAINT = 'rgba(128, 128, 128, 0.35)'
+// Colours are the engine's theme keys, so each follows the light or dark theme on
+// every surface (a desktop Text ignores dimColor, but honours these). `claude` is
+// the Claude orange, `inactive` a readable grey, `subtle` a grey all but gone.
+const TONE: Record<Tone, TextProps> = {
+  accent: { color: 'claude' },
+  strong: { bold: true },
+  plain: {},
+  faint: { color: 'subtle' },
+}
+const QUIET: TextProps = { color: 'inactive' }
 
-// A Pulse line set in its tones: the Move bold, the separators all but gone.
-// Muted is the voice of a line that sits beside other things: the reply, Earlier.
-function Typeset(props: { Text: ElementConstructor<TextProps>; surface: string; parts: Part[]; isMuted?: boolean }) {
-  const { Text, surface, parts, isMuted = false } = props
-  const style = (tone: Tone): TextProps => {
-    const bold = tone === 'strong' ? true : undefined
-    if (surface === 'desktop') return { bold, color: tone === 'faint' ? FAINT : isMuted ? MUTED : undefined }
-    return { bold, dimColor: tone === 'faint' || isMuted ? true : undefined }
-  }
+// A Pulse line set in its tones. Muted is the voice of a line that sits beside
+// other things, the reply's last line and the Earlier ones: its plain parts grey.
+function Typeset(props: { Text: ElementConstructor<TextProps>; parts: Part[]; isMuted?: boolean }) {
+  const { Text, parts, isMuted = false } = props
+  const style = (tone: Tone): TextProps =>
+    isMuted && (tone === 'plain' || tone === 'strong') ? { ...TONE[tone], ...QUIET } : TONE[tone]
   return (
     <Text>
       {parts.map((part, index) => (
@@ -106,15 +109,23 @@ function Typeset(props: { Text: ElementConstructor<TextProps>; surface: string; 
 const STALE_NOTE: Part = { text: ' (stale: the last reply carried no Pulse line)', tone: 'faint' }
 const LIMIT_NAMES: Record<string, string> = { five_hour: '5h', seven_day: '7d' }
 
-// The meters: context fill, each rate-limit window and the session's cost, as the
-// engine itself figures them (no price table of the mod's own).
-async function meters($: EngineInterface) {
+type Gauge = { name: string; percent: number }
+
+// The gauges: context fill and each rate-limit window, as the engine itself figures
+// them, and the session's cost (no price table of the mod's own).
+async function gauges($: EngineInterface): Promise<{ list: Gauge[]; cost?: string }> {
   const usage = await $.session.usage()
-  return [
-    ...(usage.context.percent === undefined ? [] : [`context ${Math.round(usage.context.percent)}%`]),
-    ...usage.rateLimits.map(limit => `${LIMIT_NAMES[limit.kind] ?? limit.kind} ${Math.round(limit.percentUsed)}%`),
-    ...(usage.cost === undefined ? [] : [`$${usage.cost.usd.toFixed(2)}`]),
-  ].join(' · ')
+  const list = [
+    ...(usage.context.percent === undefined ? [] : [{ name: 'context', percent: usage.context.percent }]),
+    ...usage.rateLimits.map(limit => ({ name: LIMIT_NAMES[limit.kind] ?? limit.kind, percent: limit.percentUsed })),
+  ]
+  return { list, cost: usage.cost === undefined ? undefined : `$${usage.cost.usd.toFixed(2)}` }
+}
+
+// The gauges in one line of text, for /pulse and the toast.
+async function meters($: EngineInterface) {
+  const { list, cost } = await gauges($)
+  return [...list.map(g => `${g.name} ${Math.round(g.percent)}%`), ...(cost === undefined ? [] : [cost])].join(' · ')
 }
 
 // A press is the person asking, so the pane seats at any width; where the surface
@@ -191,22 +202,57 @@ export const register: Register = on => {
     const { Box, Text } = $.ui.resolve(e)
     const current = await read($, pulse)
     const before = earlier(current, await read($, history))
-    const gauges = await meters($)
-    const quiet: TextProps = e.surface === 'desktop' ? { color: MUTED } : { dimColor: true }
-    const set = (p: SessionPulse, isMuted?: boolean) => (
-      <Typeset Text={Text} surface={e.surface} parts={[...pulseParts(p), ...(p.isStale ? [STALE_NOTE] : [])]} isMuted={isMuted} />
+    const { list, cost } = await gauges($)
+    const across = Math.max((e.props.bodyColumns ?? 40) - 2, 10)
+    const rule = (
+      <Box marginBottom={1}>
+        <Text color="subtle" wrap="truncate-end">
+          {'─'.repeat(across)}
+        </Text>
+      </Box>
     )
-    // Every entry is a paragraph of its own, a blank line beneath it.
+    const set = (p: SessionPulse, isMuted?: boolean) => (
+      <Typeset Text={Text} parts={[...pulseParts(p), ...(p.isStale ? [STALE_NOTE] : [])]} isMuted={isMuted} />
+    )
+    const NAME_CELLS = 9
+    const VALUE_CELLS = 5
+    const cells = Math.max(Math.min(across - NAME_CELLS - VALUE_CELLS, 20), 6)
+    const gauge = (g: Gauge) => {
+      const { filled, empty } = gaugeCells(g.percent, cells)
+      return (
+        <Box key={`g-${g.name}`} flexDirection="row">
+          <Box width={NAME_CELLS}>
+            <Text {...QUIET}>{g.name}</Text>
+          </Box>
+          <Text>
+            {filled > 0 ? <Text color={gaugeColor(g.percent)}>{'━'.repeat(filled)}</Text> : null}
+            {empty > 0 ? <Text color="subtle">{'━'.repeat(empty)}</Text> : null}
+          </Text>
+          <Text>{` ${Math.round(g.percent)}%`}</Text>
+        </Box>
+      )
+    }
+    // Every Pulse is a paragraph of its own, a blank line beneath it; rules set the
+    // history and the gauges off.
     return (
       <Box flexDirection="column" paddingX={1}>
-        <Box marginBottom={1}>{current === null ? <Text {...quiet}>No Pulse yet.</Text> : set(current)}</Box>
-        {before.length === 0 ? null : <Text {...quiet}>Earlier</Text>}
+        <Box marginBottom={1}>{current === null ? <Text {...QUIET}>No Pulse yet.</Text> : set(current)}</Box>
+        {before.length === 0 ? null : rule}
         {before.map((p, index) => (
           <Box key={`h${index}`} marginBottom={1}>
             {set(p, true)}
           </Box>
         ))}
-        {gauges === '' ? null : <Text {...quiet}>{gauges}</Text>}
+        {list.length === 0 && cost === undefined ? null : rule}
+        {list.map(gauge)}
+        {cost === undefined ? null : (
+          <Box flexDirection="row">
+            <Box width={NAME_CELLS}>
+              <Text {...QUIET}>cost</Text>
+            </Box>
+            <Text>{cost}</Text>
+          </Box>
+        )}
       </Box>
     )
   })
@@ -224,7 +270,7 @@ export const register: Register = on => {
       <Box flexDirection="column">
         {body}
         <Box key="pulse-line" marginTop={body === null ? 0 : 1}>
-          <Typeset Text={Text} surface={e.surface} parts={pulseParts(line)} isMuted />
+          <Typeset Text={Text} parts={pulseParts(line)} isMuted />
         </Box>
       </Box>
     )

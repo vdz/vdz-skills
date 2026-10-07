@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { footerLabel, parsePulseLine, pulseParts } from './pulse'
+import { footerLabel, gaugeCells, gaugeColor, parsePulseLine, pulseParts } from './pulse'
 
 test('a reply ending in a Pulse line yields its Move, Step and Next action', async () => {
   const reply = 'Tests are green.\n\n◂ your move · 3/5 · next: approve the PR'
@@ -26,16 +26,28 @@ test('a Pulse line set in code or bold still reads', async () => {
   expect(parsePulseLine('**■ blocked · next: get a vdz token**')).toEqual({ move: 'blocked', next: 'get a vdz token' })
 })
 
-test('a Pulse line splits into parts: the Move strong, the separators faint', async () => {
+test('a Pulse line splits into parts: the glyph and "next:" accented, the Move strong, the separators faint', async () => {
   expect(pulseParts({ move: 'your move', step: { n: 3, of: 5 }, next: 'approve the PR' })).toEqual([
-    { text: '◂ your move', tone: 'strong' },
+    { text: '◂ ', tone: 'accent' },
+    { text: 'your move', tone: 'strong' },
     { text: ' · ', tone: 'faint' },
     { text: '3/5', tone: 'plain' },
     { text: ' · ', tone: 'faint' },
-    { text: 'next: ', tone: 'faint' },
+    { text: 'next: ', tone: 'accent' },
     { text: 'approve the PR', tone: 'plain' },
   ])
-  expect(pulseParts({ move: 'done' })).toEqual([{ text: '✓ done', tone: 'strong' }])
+  expect(pulseParts({ move: 'done' })).toEqual([
+    { text: '✓ ', tone: 'accent' },
+    { text: 'done', tone: 'strong' },
+  ])
+})
+
+test('a gauge bar fills its share of the cells and warms as it fills', async () => {
+  expect(gaugeCells(42, 10)).toEqual({ filled: 4, empty: 6 })
+  expect(gaugeCells(0, 10)).toEqual({ filled: 0, empty: 10 })
+  expect(gaugeCells(3, 10)).toEqual({ filled: 1, empty: 9 })
+  expect(gaugeCells(130, 10)).toEqual({ filled: 10, empty: 0 })
+  expect([gaugeColor(42), gaugeColor(61), gaugeColor(90)]).toEqual(['success', 'warning', 'error'])
 })
 
 test('the footer label is the Move and the Step only, short enough for any footer', async () => {
