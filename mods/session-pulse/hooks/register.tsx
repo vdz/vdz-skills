@@ -117,7 +117,6 @@ const LIMIT_NAMES: Record<string, string> = { five_hour: '5h', seven_day: '7d' }
 // One row of the pane's facts: a name, its value, and a hint saying what it counts.
 type Fact = { name: string; value: string; hint: string; isCode?: boolean }
 
-const LIMIT_HINTS: Record<string, string> = { five_hour: 'of the 5-hour usage limit', seven_day: 'of the weekly usage limit' }
 // A memory file by its last two path segments: `.claude/CLAUDE.md`.
 const tail = (path: string) => path.split('/').slice(-2).join('/')
 
@@ -141,7 +140,7 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
   const breakdown = context.breakdown
   const window: Fact[] = []
   if (context.percent !== undefined) {
-    const hint = `${tokens(context.tokens ?? 0)} of ${tokens(context.window)} tokens in the window`
+    const hint = `${tokens(context.tokens ?? 0)} of ${tokens(context.window)}`
     window.push({ name: 'context', value: `${Math.round(context.percent)}% used`, hint })
   }
   if (breakdown !== undefined) {
@@ -149,7 +148,7 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
     if (threshold === undefined) window.push({ name: 'compact', value: 'off', hint: 'auto-compact is off' })
     else {
       const room = threshold - (context.tokens ?? 0)
-      window.push({ name: 'compact', value: room > 0 ? `in ${tokens(room)}` : 'due', hint: `auto-compact at ${tokens(threshold)} tokens` })
+      window.push({ name: 'compact', value: room > 0 ? `in ${tokens(room)}` : 'due', hint: `at ${tokens(threshold)}` })
     }
     const files = breakdown.memoryFiles
     if (files.length > 0) {
@@ -159,20 +158,19 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
     }
   }
   const limits: Fact[] = usage.rateLimits.map(limit => {
-    const reset = limit.resetsAt === undefined ? '' : ` · resets in ${timeLeft(Date.parse(limit.resetsAt) - now)}`
-    const hint = `${LIMIT_HINTS[limit.kind] ?? 'of this limit'}${reset}`
+    const hint = limit.resetsAt === undefined ? '' : `resets in ${timeLeft(Date.parse(limit.resetsAt) - now)}`
     return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, value: `${Math.round(limit.percentUsed)}% used`, hint }
   })
-  if (usage.cost !== undefined) limits.push({ name: 'cost', value: `$${usage.cost.usd.toFixed(2)}`, hint: 'this session at API prices, as /cost' })
+  if (usage.cost !== undefined) limits.push({ name: 'cost', value: `$${usage.cost.usd.toFixed(2)}`, hint: 'at API prices' })
   const failed = await read($, errors)
   const work: Fact[] = [
-    { name: 'errors', value: String(failed.count), hint: failed.last === undefined ? 'failed tool calls this session' : `last: ${failed.last}` },
+    { name: 'errors', value: String(failed.count), hint: failed.last === undefined ? 'failed tool calls' : `last: ${failed.last}` },
   ]
   const git = await gitStatus($)
   if (git !== null) {
     const away = [git.ahead > 0 ? `${git.ahead} ahead` : '', git.behind > 0 ? `${git.behind} behind` : ''].filter(Boolean).join(', ')
-    work.push({ name: 'branch', value: git.branch, isCode: true, hint: away === '' ? 'level with its upstream' : `${away} of upstream` })
-    work.push({ name: 'changes', value: `${git.changed} file${git.changed === 1 ? '' : 's'}`, hint: 'uncommitted in the working tree' })
+    work.push({ name: 'branch', value: git.branch, isCode: true, hint: away === '' ? 'level with upstream' : away })
+    work.push({ name: 'changes', value: `${git.changed} file${git.changed === 1 ? '' : 's'}`, hint: 'uncommitted' })
   }
   return [window, limits, work].filter(block => block.length > 0)
 }
@@ -281,9 +279,11 @@ export const register: Register = on => {
               </Box>
               <Markdown text={u.isCode ? `\`${u.value}\`` : codeNumbers(u.value)} />
             </Box>
-            <Box marginLeft={NAME_CELLS}>
-              <Text color="subtle">{u.hint}</Text>
-            </Box>
+            {u.hint === '' ? null : (
+              <Box marginLeft={NAME_CELLS}>
+                <Text color="subtle">{u.hint}</Text>
+              </Box>
+            )}
           </Box>
         )))}
       </Box>

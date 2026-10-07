@@ -15,7 +15,7 @@ test('the pane shows the room left before auto-compact, and the memory loaded', 
   await reply($, '▸ working · next: write the parser')
   const pane = await paneOf($)
   // 160k threshold, 84k in the window.
-  expect(await row(pane, 'compact')).toMatch(/^compactin 76k.*auto-compact at 160k tokens/)
+  expect(await row(pane, 'compact')).toMatch(/^compactin 76k.*at 160k$/)
   expect(await row(pane, 'memory')).toMatch(/^memory6\.2k · 2 files.*\.claude\/CLAUDE\.md 2\.1k · repo\/CLAUDE\.md 4\.1k/)
   await pane.unmount()
 })
@@ -37,8 +37,8 @@ test('the pane shows the branch and the uncommitted files', async ($, on) => {
   await boot($, on)
   await reply($, '▸ working · next: commit')
   const pane = await paneOf($)
-  expect(await row(pane, 'branch')).toMatch(/^branchfeat\/x.*2 ahead of upstream/)
-  expect(await row(pane, 'changes')).toMatch(/^changes2 files.*uncommitted/)
+  expect(await row(pane, 'branch')).toMatch(/^branchfeat\/x.*2 ahead$/)
+  expect(await row(pane, 'changes')).toMatch(/^changes2 files.*uncommitted$/)
   // The branch is code as a whole, digits and all.
   expect(await pane.find({ type: 'Markdown', text: '`feat/x`' })).toBeTruthy()
   await pane.unmount()

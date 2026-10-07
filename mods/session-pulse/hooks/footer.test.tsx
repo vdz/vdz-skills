@@ -49,12 +49,12 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
     expect(await pane.find({ type: 'Markdown', text: value })).toBeTruthy()
   }
   // Each has a hint beneath it.
-  expect(await pane.find({ type: 'Text', text: /84k of 200k tokens/ })).toBeTruthy()
-  expect(await pane.find({ type: 'Text', text: /resets in 2h 10m/ })).toBeTruthy()
-  expect(await pane.find({ type: 'Text', text: /API price/ })).toBeTruthy()
+  expect(await pane.find({ type: 'Text', text: /^84k of 200k$/ })).toBeTruthy()
+  expect(await pane.find({ type: 'Text', text: /^resets in 2h 10m$/ })).toBeTruthy()
+  expect(await pane.find({ type: 'Text', text: /^at API prices$/ })).toBeTruthy()
   // Every hint shows outright, in the faintest grey: nothing waits on a hover.
   expect((await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none')).toHaveLength(0)
-  expect((await pane.find({ type: 'Text', text: /^84k of 200k tokens/ }))?.props.color).toBe('subtle')
+  expect((await pane.find({ type: 'Text', text: /^84k of 200k$/ }))?.props.color).toBe('subtle')
   await pane.unmount()
   await footer.unmount()
 })
