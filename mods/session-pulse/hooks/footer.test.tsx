@@ -55,11 +55,11 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   // The icon at the pane's right edge shows the rest: padded on its left alone, wide
   // enough to hit, the glyph flush right; no tip, as one would open over it and take the click.
   expect((await pane.find({ key: 'pulse-more' }))?.props.text).toBe('[\u00a0\u00a0\u00a0\u00a0▾](https://pulse.invalid/fold "Show every fact")')
-  // The icon's row spans the pane, so the icon sits at the right edge.
-  expect((await pane.findAll({ type: 'Box' })).some(b => b.props.width === '100%' && b.props.flexDirection === 'row')).toBe(true)
-  // Every control says what it does in a card on hover; no title shows on the desktop.
-  const tips = async () => (await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none').map(b => b.text)
-  expect(await tips()).toEqual(expect.arrayContaining(['Show every fact', 'Open usage on claude.ai']))
+  // The icon has a row of its own at the top of the facts, set to its end: the pane's right edge.
+  expect((await pane.findAll({ type: 'Box' })).some(b => b.props.justifyContent === 'flex-end' && b.text?.includes('▾'))).toBe(true)
+  // Nothing waits on a hover.
+  const hidden = async () => (await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none' || b.props.position === 'absolute')
+  expect(await hidden()).toHaveLength(0)
   // A pointer on a placed Box is on its parent, so nothing pressable sits in one: only hidden tips are placed.
   const placed = (await pane.findAll({ type: 'Box' })).filter(b => b.props.position === 'absolute')
   expect(placed.every(b => b.props.display === 'none')).toBe(true)
@@ -71,9 +71,7 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   expect(await pane.find({ key: 'u-branch' })).toBeTruthy()
   expect((await pane.find({ key: 'pulse-more' }))?.props.text).toBe('[\u00a0\u00a0\u00a0\u00a0▴](https://pulse.invalid/fold "Show the short form")')
   expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/tree/feat/x "feat/x on GitHub")' })).toBeTruthy()
-  expect(await tips()).toEqual(expect.arrayContaining(['Show the short form', 'Open usage on claude.ai', 'Open feat/x on GitHub', 'Open the file']))
-  // No hint waits on a hover: what hides is only the cards.
-  expect((await tips()).some(tip => /^84k of 200k$|^at API prices$/.test(tip ?? ''))).toBe(false)
+  expect(await hidden()).toHaveLength(0)
   await pane.unmount()
   await footer.unmount()
 })

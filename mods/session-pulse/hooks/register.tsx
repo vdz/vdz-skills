@@ -127,7 +127,7 @@ const SHORT = new Set(['context', '5h', '7d', 'cost'])
 // One row of the pane's facts: a name, its value, and a hint saying what it counts.
 // `href` makes the value a link; a hint with `isHintMarkdown` carries links of its own.
 // `href` makes the value a link, `title` its title. `onHintPress` makes the hint a
-// control. `tip` says what the row's link or control does, in a card on hover.
+// control, `tip` its title.
 type Fact = {
   name: string
   value: string
@@ -141,11 +141,11 @@ type Fact = {
   onHintPress?: () => Promise<void>
 }
 
-// A markdown link with a title, which an HTML surface shows as its native tooltip.
+// A markdown link with a title (the desktop shows none; a terminal or browser may).
 const link = (text: string, href: string, title: string) => `[${text}](${href} "${title.replaceAll('"', "'")}")`
 
-// A control: a link the mod answers itself, so the surface opens nothing, and so it
-// carries a title, the native tooltip saying what a press does (no Button can).
+// A control: a link the mod answers itself, so the surface opens nothing. A Button
+// would do, but in the desktop pane only a link has been seen to take the press.
 // Its href goes nowhere (`.invalid` never resolves) in case a surface opens it anyway.
 const actionHref = (id: string) => `https://pulse.invalid/${id}`
 const escapeLabel = (label: string) => label.replace(/[[\]\\]/g, char => `\\${char}`)
@@ -241,12 +241,12 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
       const total = files.reduce((sum, file) => sum + file.tokens, 0)
       const value = `${tokens(total)} · ${files.length} file${files.length === 1 ? '' : 's'}`
       const hint = files.map(file => `${link(tail(file.path), fileLink(file.path), file.path)} ${tokens(file.tokens)}`).join(' · ')
-      window.push({ name: 'memory', value, hint, isHintMarkdown: true, tip: 'Open the file' })
+      window.push({ name: 'memory', value, hint, isHintMarkdown: true })
     }
   }
   const limits: Fact[] = usage.rateLimits.map(limit => {
     const hint = limit.resetsAt === undefined ? '' : `resets in ${timeLeft(Date.parse(limit.resetsAt) - now)}`
-    return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, value: `${Math.round(limit.percentUsed)}% used`, hint, href: USAGE_PAGE, title: 'Usage on claude.ai', tip: 'Open usage on claude.ai' }
+    return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, value: `${Math.round(limit.percentUsed)}% used`, hint, href: USAGE_PAGE, title: 'Usage on claude.ai' }
   })
   if (usage.cost !== undefined) limits.push({ name: 'cost', value: `$${usage.cost.usd.toFixed(2)}`, hint: 'at API prices' })
   const failed = await read($, errors)
@@ -269,7 +269,7 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
     const where = status.upstream === undefined ? 'not pushed' : away === '' ? 'level with upstream' : away
     const hint = pr === null ? where : `PR #${pr.number} · ${where}`
     const title = pr === null ? `${status.branch} on GitHub` : `PR #${pr.number} on GitHub`
-    work.push({ name: 'branch', value: status.branch, isCode: true, hint, ...(href === undefined ? {} : { href, title, tip: `Open ${title}` }) })
+    work.push({ name: 'branch', value: status.branch, isCode: true, hint, ...(href === undefined ? {} : { href, title }) })
     const count = status.files.length
     const root = ((await git($, 'rev-parse', '--show-toplevel')) ?? '').trim()
     const named = status.files.slice(0, FILES_LISTED).map(file => (root === '' ? tail(file) : link(tail(file), fileLink(`${root}/${file}`), `${root}/${file}`)))
@@ -279,7 +279,6 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
       value: `${count} file${count === 1 ? '' : 's'}`,
       hint: count === 0 ? 'uncommitted' : `uncommitted: ${files}`,
       isHintMarkdown: true,
-      ...(count > 0 && root !== '' ? { tip: 'Open the file' } : {}),
     })
   }
   return [window, limits, work].filter(block => block.length > 0)
@@ -400,31 +399,21 @@ export const register: Register = on => {
     }
     // The icon that folds the facts, in the flow at the end of their first row: a
     // pointer on a placed Box is on its parent, so a control in one is never pressed.
-    // Padded on its left with no-break spaces to a target worth aiming at, the glyph
-    // flush with the pane's right edge; its card opens to its left, never over it.
+    // Padded on its left with no-break spaces to a target worth aiming at. It has a
+    // row of its own at the top of the facts, set to its end: the one way the desktop
+    // puts it at the pane's right edge (it grows no spacer and keeps no row's width).
     const PAD = '\u00a0\u00a0\u00a0\u00a0'
-    const FOLD_CELLS = PAD.length + 1
-    const foldTip = isFull ? 'Show the short form' : 'Show every fact'
+    const foldTitle = isFull ? 'Show the short form' : 'Show every fact'
     const fold = (
       <Action
         Markdown={Markdown}
         id="fold"
         name="pulse-more"
         label={`${PAD}${isFull ? '▴' : '▾'}`}
-        title={foldTip}
+        title={foldTitle}
         onPress={toggle}
       />
     )
-    // A title shows on no desktop link, so each control says what it does in a card:
-    // on its row's far right, over nothing, while the pointer rests on the control
-    // (a hover scope ties the two). Drawn on the user messages' background.
-    const scoped = (scope: string, element: unknown) => <Box hover={{ scope }}>{element as never}</Box>
-    const card = (scope: string, tip: string, right = 0) => (
-      <Box position="absolute" top={0} right={right} display="none" hover={{ scope, display: 'flex' }} backgroundColor="userMessageBackground" paddingX={1}>
-        <Text color="inactive">{tip}</Text>
-      </Box>
-    )
-    const tipScope = (u: Fact) => `pulse-tip-${u.name}`
     // The facts as two columns, the name quiet and the value plain, each with its hint
     // beneath in the faintest grey (no element sets a smaller size).
     const NAME_CELLS = 9
@@ -438,30 +427,19 @@ export const register: Register = on => {
             {set(p, true)}
           </Box>
         ))}
-        <Box flexDirection="column" marginTop={1} width="100%">
+        <Box flexDirection="column" marginTop={1}>
+          <Box flexDirection="row" justifyContent="flex-end">
+            {fold}
+          </Box>
           {blocks.flatMap((block, at) => block.map((u, index) => (
-            <Box key={`u-${u.name}`} flexDirection="column" marginTop={index === 0 && at > 0 ? 1 : 0} width="100%">
-              {/* Each row spans the pane (the desktop's bodyColumns runs short of it), so
-                  the icon at the end of the first sits at the pane's right edge. */}
-              <Box flexDirection="row" width="100%">
+            <Box key={`u-${u.name}`} flexDirection="column" marginTop={index === 0 && at > 0 ? 1 : 0}>
+              <Box flexDirection="row">
                 <Box width={NAME_CELLS}>
                   <Text {...QUIET}>{u.name}</Text>
                 </Box>
-                {u.tip !== undefined && u.href !== undefined ? scoped(tipScope(u), value(u)) : value(u)}
-                {at === 0 && index === 0 ? (
-                  <>
-                    <Box flexGrow={1} />
-                    {scoped('pulse-tip-fold', fold)}
-                    {card('pulse-tip-fold', foldTip, FOLD_CELLS + 1)}
-                  </>
-                ) : null}
-                {u.tip === undefined ? null : card(tipScope(u), u.tip)}
+                {value(u)}
               </Box>
-              {u.hint === '' ? null : (
-                <Box marginLeft={NAME_CELLS}>
-                  {u.tip !== undefined && u.href === undefined ? scoped(tipScope(u), hint(u)) : hint(u)}
-                </Box>
-              )}
+              {u.hint === '' ? null : <Box marginLeft={NAME_CELLS}>{hint(u)}</Box>}
             </Box>
           )))}
         </Box>
