@@ -1,0 +1,49 @@
+mods/session-pulse/README.md
+  638774b95a471205 18-24
+
+mods/session-pulse/hooks/context.test.tsx
+  638774b95a471205 5-13,17-18,22,29-30,34-35,40,46,50-51,57-67,72
+
+mods/session-pulse/hooks/footer.test.tsx
+  638774b95a471205 46-47,51-56,59-61
+
+mods/session-pulse/hooks/harness.tsx
+  638774b95a471205 37,40-42
+
+mods/session-pulse/hooks/pulse.test.ts
+  638774b95a471205 3,64,80-92
+
+mods/session-pulse/hooks/pulse.ts
+  638774b95a471205 83,91,93-106
+
+mods/session-pulse/hooks/register.tsx
+  638774b95a471205 5,28-30,119-121,124-125,130-131,133-134,140-154,179-180,185,190-195,197-203,226-227,286,289-292,296-305,325,329,334-336
+
+mods/session-pulse/types/index.d.ts
+  638774b95a471205 23-24
+
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "base_commit_sha": "c2ca3a8aed13d5930766cf47b3504e059441dd12",
+  "prompts": {
+    "638774b95a471205": {
+      "tool": "claude_code",
+      "id": "79ae11fb-26d8-4458-9009-80678f86b18f",
+      "model": "unknown",
+      "author": {
+        "human": "Yehuda Gilead <545253+vdz@users.noreply.github.com>"
+      },
+      "total_additions": 153,
+      "total_deletions": 42,
+      "sparkey": {
+        "attribution_precision": "commit"
+      }
+    }
+  },
+  "sparkey": {
+    "client_version": ""
+  }
+}
+Sparkey-Session-Id: 79ae11fb-26d8-4458-9009-80678f86b18f
+Sparkey-Contributor-Uuid: 25f5f227-833d-47fa-9e95-a7511bdf660d
