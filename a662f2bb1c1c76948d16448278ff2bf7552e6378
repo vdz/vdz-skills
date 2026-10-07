@@ -1,0 +1,34 @@
+mods/session-pulse/README.md
+  638774b95a471205 19
+
+mods/session-pulse/hooks/footer.test.tsx
+  638774b95a471205 51,55-57
+
+mods/session-pulse/hooks/register.tsx
+  638774b95a471205 263-264,284
+
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "base_commit_sha": "68669e8f624d2fc5c782f288d435d77f97f9e410",
+  "prompts": {
+    "638774b95a471205": {
+      "tool": "claude_code",
+      "id": "79ae11fb-26d8-4458-9009-80678f86b18f",
+      "model": "unknown",
+      "author": {
+        "human": "Yehuda Gilead <545253+vdz@users.noreply.github.com>"
+      },
+      "total_additions": 8,
+      "total_deletions": 19,
+      "sparkey": {
+        "attribution_precision": "commit"
+      }
+    }
+  },
+  "sparkey": {
+    "client_version": ""
+  }
+}
+Sparkey-Session-Id: 79ae11fb-26d8-4458-9009-80678f86b18f
+Sparkey-Contributor-Uuid: 25f5f227-833d-47fa-9e95-a7511bdf660d
