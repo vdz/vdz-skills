@@ -80,17 +80,19 @@ export function codeNumbers(value: string): string {
   return value.replace(/\$?\d[\d.,]*[k%]?/g, number => `\`${number}\``)
 }
 
-export type GitStatus = { branch: string; upstream?: string; ahead: number; behind: number; changed: number }
+export type GitStatus = { branch: string; upstream?: string; ahead: number; behind: number; files: string[] }
 
 // `git status --porcelain --branch`: its header line names the branch and how far
-// it is from its upstream; every other line is one uncommitted file.
+// it is from its upstream; every other line is one uncommitted file, by its path
+// from the repository's root (a rename by its new name).
 export function parseGitStatus(out: string): GitStatus {
   const [head = '', ...files] = out.split('\n').filter(line => line !== '')
   const name = head.replace(/^## /, '').replace(/^No commits yet on /, '')
   const branch = name.startsWith('HEAD (no branch)') ? 'detached' : (name.split('...')[0] ?? '').split(' ')[0] ?? ''
   const upstream = name.match(/\.\.\.(\S+)/)?.[1]
   const count = (word: string) => Number(head.match(new RegExp(`${word} (\\d+)`))?.[1] ?? 0)
-  return { branch, ...(upstream === undefined ? {} : { upstream }), ahead: count('ahead'), behind: count('behind'), changed: files.length }
+  const path = (line: string) => (line.slice(3).split(' -> ').at(-1) ?? '').replace(/^"(.*)"$/, '$1')
+  return { branch, ...(upstream === undefined ? {} : { upstream }), ahead: count('ahead'), behind: count('behind'), files: files.map(path) }
 }
 
 // A git remote as the web address of its repository: `git@github.com:o/r.git` and

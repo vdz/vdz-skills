@@ -61,10 +61,12 @@ test('token counts read short: whole hundreds, one decimal under ten thousand, w
 
 test('git status reads as the branch, how far it is from its upstream, and the uncommitted files', async () => {
   const out = '## feat/session-pulse-mod...origin/feat/session-pulse-mod [ahead 2, behind 1]\n M a.ts\n?? b.ts\n'
-  expect(parseGitStatus(out)).toEqual({ branch: 'feat/session-pulse-mod', upstream: 'origin/feat/session-pulse-mod', ahead: 2, behind: 1, changed: 2 })
-  expect(parseGitStatus('## main\n')).toEqual({ branch: 'main', ahead: 0, behind: 0, changed: 0 })
-  expect(parseGitStatus('## No commits yet on main\n')).toEqual({ branch: 'main', ahead: 0, behind: 0, changed: 0 })
-  expect(parseGitStatus('## HEAD (no branch)\n M x\n')).toEqual({ branch: 'detached', ahead: 0, behind: 0, changed: 1 })
+  expect(parseGitStatus(out)).toEqual({ branch: 'feat/session-pulse-mod', upstream: 'origin/feat/session-pulse-mod', ahead: 2, behind: 1, files: ['a.ts', 'b.ts'] })
+  expect(parseGitStatus('## main\n')).toEqual({ branch: 'main', ahead: 0, behind: 0, files: [] })
+  expect(parseGitStatus('## No commits yet on main\n')).toEqual({ branch: 'main', ahead: 0, behind: 0, files: [] })
+  expect(parseGitStatus('## HEAD (no branch)\n M x\n')).toEqual({ branch: 'detached', ahead: 0, behind: 0, files: ['x'] })
+  // A rename is its new name; a name git quotes loses the quotes.
+  expect(parseGitStatus('## main\nR  old.ts -> new.ts\n?? "with space.md"\n?? docs/\n').files).toEqual(['new.ts', 'with space.md', 'docs/'])
 })
 
 test('the numbers in a value are set as code, the words around them left plain', async () => {

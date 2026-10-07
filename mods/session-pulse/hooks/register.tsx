@@ -117,12 +117,26 @@ function Typeset(props: { Text: ElementConstructor<TextProps>; parts: Part[]; is
 const STALE_NOTE: Part = { text: ' (stale: the last reply carried no Pulse line)', tone: 'faint' }
 const LIMIT_NAMES: Record<string, string> = { five_hour: '5h', seven_day: '7d' }
 const USAGE_PAGE = 'https://claude.ai/settings/usage'
+const ERRORS_LISTED = 5
+const FILES_LISTED = 5
+// How long an answer from GitHub about the branch's pull request holds.
+const PR_FRESH_MS = 5 * 60_000
 // What the pane shows before `more`: the context and what the session spends.
 const SHORT = new Set(['context', '5h', '7d', 'cost'])
 
 // One row of the pane's facts: a name, its value, and a hint saying what it counts.
 // `href` makes the value a link; a hint with `isHintMarkdown` carries links of its own.
-type Fact = { name: string; value: string; hint: string; isCode?: boolean; href?: string; isAlarm?: boolean; isHintMarkdown?: boolean }
+// `onHintPress` makes the hint a button.
+type Fact = {
+  name: string
+  value: string
+  hint: string
+  isCode?: boolean
+  href?: string
+  isAlarm?: boolean
+  isHintMarkdown?: boolean
+  onHintPress?: () => Promise<void>
+}
 
 // A memory file by its last two path segments: `.claude/CLAUDE.md`.
 const tail = (path: string) => path.split('/').slice(-2).join('/')
@@ -140,6 +154,23 @@ async function git($: EngineInterface, ...args: string[]): Promise<string | null
 async function gitStatus($: EngineInterface): Promise<GitStatus | null> {
   const out = await git($, 'status', '--porcelain', '--branch')
   return out === null ? null : parseGitStatus(out)
+}
+
+// The branch's open pull request, from `gh`, or null when it has none, or gh is
+// missing or signed out. GitHub is a network call away, so an answer holds a while.
+type PullRequest = { number: number; url: string }
+const pullRequests = new Map<string, { at: number; pr: PullRequest | null }>()
+async function pullRequest($: EngineInterface, branch: string): Promise<PullRequest | null> {
+  const now = await $.clock.now()
+  const known = pullRequests.get(branch)
+  if (known !== undefined && now - known.at < PR_FRESH_MS) return known.pr
+  let pr: PullRequest | null = null
+  try {
+    const run = await $.process.run(['gh', 'pr', 'view', '--json', 'number,url'], { timeoutMs: 5000 })
+    if (run.exitCode === 0) pr = JSON.parse(run.stdout) as PullRequest
+  } catch {}
+  pullRequests.set(branch, { at: now, pr })
+  return pr
 }
 
 // Where the branch was pushed, on the web: `<repo>/tree/<branch>`, or undefined for
@@ -192,17 +223,37 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
       value: String(failed.count),
       hint: failed.last === undefined ? 'failed tool calls' : `last: ${failed.last}`,
       isAlarm: failed.count > 0,
+      ...(failed.count > 0 ? { onHintPress: () => listErrors($) } : {}),
     },
   ]
   const status = await gitStatus($)
   if (status !== null) {
     const away = [status.ahead > 0 ? `${status.ahead} ahead` : '', status.behind > 0 ? `${status.behind} behind` : ''].filter(Boolean).join(', ')
-    const href = await branchUrl($, status.upstream)
-    const hint = status.upstream === undefined ? 'not pushed' : away === '' ? 'level with upstream' : away
+    const pr = status.upstream === undefined ? null : await pullRequest($, status.branch)
+    const href = pr?.url ?? (await branchUrl($, status.upstream))
+    const where = status.upstream === undefined ? 'not pushed' : away === '' ? 'level with upstream' : away
+    const hint = pr === null ? where : `PR #${pr.number} · ${where}`
     work.push({ name: 'branch', value: status.branch, isCode: true, hint, ...(href === undefined ? {} : { href }) })
-    work.push({ name: 'changes', value: `${status.changed} file${status.changed === 1 ? '' : 's'}`, hint: 'uncommitted' })
+    const count = status.files.length
+    const root = ((await git($, 'rev-parse', '--show-toplevel')) ?? '').trim()
+    const named = status.files.slice(0, FILES_LISTED).map(file => (root === '' ? tail(file) : `[${tail(file)}](${fileLink(`${root}/${file}`)})`))
+    const files = [...named, ...(count > FILES_LISTED ? [`+${count - FILES_LISTED} more`] : [])].join(' · ')
+    work.push({
+      name: 'changes',
+      value: `${count} file${count === 1 ? '' : 's'}`,
+      hint: count === 0 ? 'uncommitted' : `uncommitted: ${files}`,
+      isHintMarkdown: true,
+    })
   }
   return [window, limits, work].filter(block => block.length > 0)
+}
+
+// The last few failed tool calls, newest first, as a toast.
+async function listErrors($: EngineInterface) {
+  const failed = await read($, errors)
+  const recent = [...(failed.recent ?? (failed.last === undefined ? [] : [failed.last]))].reverse()
+  const head = `Last ${recent.length} of ${failed.count} failed tool call${failed.count === 1 ? '' : 's'}:`
+  await $.ui.toast([head, ...recent].join('\n'), { timeoutMs: 15_000 })
 }
 
 // The facts in one line of text, for /pulse and the toast.
@@ -326,7 +377,13 @@ export const register: Register = on => {
             </Box>
             {u.hint === '' ? null : (
               <Box marginLeft={NAME_CELLS}>
-                {u.isHintMarkdown === true ? <Markdown text={u.hint} dimColor /> : <Text color="subtle">{u.hint}</Text>}
+                {u.onHintPress !== undefined ? (
+                  <Button key={`pulse-${u.name}`} label={u.hint} plain dimColor onPress={u.onHintPress} />
+                ) : u.isHintMarkdown === true ? (
+                  <Markdown text={u.hint} dimColor />
+                ) : (
+                  <Text color="subtle">{u.hint}</Text>
+                )}
               </Box>
             )}
           </Box>
@@ -365,7 +422,7 @@ export const register: Register = on => {
       await sync($)
       const first = ((result.text ?? '').split('\n')[0] ?? '').trim()
       const last = first === '' ? e.tool : `${e.tool} · ${first.length > 48 ? `${first.slice(0, 47)}…` : first}`
-      await update($, errors, failed => ({ count: failed.count + 1, last }))
+      await update($, errors, failed => ({ count: failed.count + 1, last, recent: [...(failed.recent ?? []), last].slice(-ERRORS_LISTED) }))
       await save($)
     }
     return result

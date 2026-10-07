@@ -8,7 +8,7 @@ export const COMPOSER = { kind: 'composer' } as const
 
 // The test's hooks stand for the engine beneath the mod: a store, a session id,
 // the command registry, the reply and command rows, panes and toasts.
-export async function boot($: $, on: On, options: { sessionId?: string; entries?: Record<string, unknown>; isPaneRefused?: boolean; git?: string | null } = {}) {
+export async function boot($: $, on: On, options: { sessionId?: string; entries?: Record<string, unknown>; isPaneRefused?: boolean; git?: string | null; pr?: { number: number; url: string } | null } = {}) {
   const session = { id: options.sessionId ?? 's1' }
   const seen = { toasts: [] as string[], panes: [] as string[] }
   mock.clock(on)
@@ -37,14 +37,16 @@ export async function boot($: $, on: On, options: { sessionId?: string; entries?
   const ran = (stdout: string, exitCode = 0) => ({ exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false })
   on('process.run', (_$, e) => ({
     value:
-      e.argv[0] !== 'git' || git === null ? ran('', 128)
+      e.argv[0] === 'gh' ? (options.pr ? ran(JSON.stringify(options.pr)) : ran('', 1))
+      : e.argv[0] !== 'git' || git === null ? ran('', 128)
       : e.argv[1] === 'remote' ? (e.argv[3] === 'origin' ? ran('git@github.com:vdz/skills.git\n') : ran('', 2))
+      : e.argv[1] === 'rev-parse' ? ran('/repo\n')
       : ran(git),
   }))
-  // Tools: `false` fails, as the shell's own does; anything else succeeds.
+  // Tools: `false` fails, as the shell's own does (`false 3` with exit code 3); anything else succeeds.
   on('tool.call', (_$, e) =>
-    (e.tool === 'Bash' && e.command === 'false'
-      ? { ref: 1, result: {}, text: 'Exit code 1', isError: true }
+    (e.tool === 'Bash' && e.command.startsWith('false')
+      ? { ref: 1, result: {}, text: `Exit code ${e.command.split(' ')[1] ?? 1}`, isError: true }
       : { ref: 1, result: {}, text: 'ok' }) as never,
   )
   on('command.register', (_$, e) => ({ value: { command: e.name } }))

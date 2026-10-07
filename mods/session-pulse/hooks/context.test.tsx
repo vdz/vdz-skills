@@ -47,15 +47,48 @@ test('a failed tool call counts as an error, in red, the last one named in the h
   await after.unmount()
 })
 
+test('pressing the last error lists the last five, newest first', async ($, on) => {
+  fresh()
+  const { seen } = await boot($, on)
+  await reply($, '▸ working · next: run the tests')
+  for (const n of [1, 2, 3, 4, 5, 6]) await $.tool.call({ tool: 'Bash', command: `false ${n}` } as never)
+  const pane = await paneOf($)
+  expect(await row(pane, 'errors')).toMatch(/^errors6.*last: Bash · Exit code 6/)
+  await pane.press({ key: 'pulse-errors' })
+  expect(seen.toasts.at(-1)).toBe(['Last 5 of 6 failed tool calls:', ...[6, 5, 4, 3, 2].map(n => `Bash · Exit code ${n}`)].join('\n'))
+  await pane.unmount()
+})
+
 test('the pane shows the branch, linked to its upstream, and the uncommitted files', async ($, on) => {
   fresh()
   await boot($, on)
   await reply($, '▸ working · next: commit')
   const pane = await paneOf($)
   expect(await row(pane, 'branch')).toMatch(/^branchfeat\/x.*2 ahead$/)
-  expect(await row(pane, 'changes')).toMatch(/^changes2 files.*uncommitted$/)
+  expect(await row(pane, 'changes')).toMatch(/^changes2 files.*uncommitted: a\.ts · b\.ts$/)
+  // Each uncommitted file opens from its name, found from the repository's root.
+  expect(await pane.find({ type: 'Markdown', text: 'uncommitted: [a.ts](file:///repo/a.ts) · [b.ts](file:///repo/b.ts)' })).toBeTruthy()
   // The branch is code as a whole, digits and all, and opens where it was pushed.
   expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/tree/feat/x)' })).toBeTruthy()
+  await pane.unmount()
+})
+
+test('a branch with an open pull request links to it, and says which', async ($, on) => {
+  fresh()
+  await boot($, on, { pr: { number: 42, url: 'https://github.com/vdz/skills/pull/42' } })
+  await reply($, '◂ your move · next: review')
+  const pane = await paneOf($)
+  expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/pull/42)' })).toBeTruthy()
+  expect(await row(pane, 'branch')).toMatch(/PR #42 · 2 ahead$/)
+  await pane.unmount()
+})
+
+test('past five uncommitted files the rest are counted, not listed', async ($, on) => {
+  fresh()
+  await boot($, on, { git: `## main\n${[1, 2, 3, 4, 5, 6, 7].map(n => `?? f${n}.ts`).join('\n')}\n` })
+  await reply($, '▸ working · next: commit')
+  const pane = await paneOf($)
+  expect(await row(pane, 'changes')).toMatch(/f5\.ts · \+2 more$/)
   await pane.unmount()
 })
 

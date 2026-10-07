@@ -11,8 +11,8 @@ export type SessionPulse = {
   isStale: boolean
 }
 
-/** The session's failed tool calls: how many, and the last as "<tool> · <first line>". */
-export type SessionPulseErrors = { count: number; last?: string }
+/** The session's failed tool calls: how many, and the last few as "<tool> · <first line>", oldest first. */
+export type SessionPulseErrors = { count: number; last?: string; recent?: string[] }
 
 declare module 'claude-code' {
   interface PluginState {
