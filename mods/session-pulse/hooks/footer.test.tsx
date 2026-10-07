@@ -43,18 +43,23 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   expect(await pane.find({ type: 'Text', text: '▸ working · 1/3 · next: write the parser' })).toBeTruthy()
   // No heading and no rule: space alone sets the history and the usage off.
   expect(await pane.find({ type: 'Text', text: /Earlier|─|━/ })).toBeUndefined()
-  // The usage as two columns: the name quiet, the value saying what it counts, its numbers as code.
-  for (const [name, value] of [['context', '`42%` used'], ['5h', '`61%` used'], ['cost', '`$3.20`']]) {
+  // Short at first: context, the limits and cost, no hints and nothing else.
+  for (const [name, value] of [['context', '`42%` used'], ['cost', '`$3.20`']]) {
     expect((await pane.find({ type: 'Text', text: new RegExp(`^${name}$`) }))?.props.color).toBe('inactive')
     expect(await pane.find({ type: 'Markdown', text: value })).toBeTruthy()
   }
-  // Each has a hint beneath it.
-  expect(await pane.find({ type: 'Text', text: /^84k of 200k$/ })).toBeTruthy()
+  expect(await pane.find({ type: 'Markdown', text: '[`61%` used](https://claude.ai/settings/usage)' })).toBeTruthy()
+  for (const name of ['compact', 'memory', 'errors', 'branch', 'changes']) expect(await pane.find({ key: `u-${name}` })).toBeUndefined()
+  expect(await pane.find({ type: 'Text', text: /^84k of 200k$/ })).toBeUndefined()
+  // `more` shows the rest, each with its hint beneath in the faintest grey.
+  await pane.press({ key: 'pulse-more' })
+  expect((await pane.find({ type: 'Text', text: /^84k of 200k$/ }))?.props.color).toBe('subtle')
   expect(await pane.find({ type: 'Text', text: /^resets in 2h 10m$/ })).toBeTruthy()
   expect(await pane.find({ type: 'Text', text: /^at API prices$/ })).toBeTruthy()
-  // Every hint shows outright, in the faintest grey: nothing waits on a hover.
+  expect(await pane.find({ key: 'u-branch' })).toBeTruthy()
+  expect(String((await pane.find({ type: 'Button', key: 'pulse-more' }))?.props.label)).toMatch(/less/)
+  // Nothing waits on a hover.
   expect((await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none')).toHaveLength(0)
-  expect((await pane.find({ type: 'Text', text: /^84k of 200k$/ }))?.props.color).toBe('subtle')
   await pane.unmount()
   await footer.unmount()
 })

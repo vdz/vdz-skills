@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { codeNumbers, footerLabel, parseGitStatus, parsePulseLine, pulseParts, timeLeft, tokens } from './pulse'
+import { codeNumbers, fileLink, footerLabel, parseGitStatus, webUrl, parsePulseLine, pulseParts, timeLeft, tokens } from './pulse'
 
 test('a reply ending in a Pulse line yields its Move, Step and Next action', async () => {
   const reply = 'Tests are green.\n\n◂ your move · 3/5 · next: approve the PR'
@@ -61,7 +61,7 @@ test('token counts read short: whole hundreds, one decimal under ten thousand, w
 
 test('git status reads as the branch, how far it is from its upstream, and the uncommitted files', async () => {
   const out = '## feat/session-pulse-mod...origin/feat/session-pulse-mod [ahead 2, behind 1]\n M a.ts\n?? b.ts\n'
-  expect(parseGitStatus(out)).toEqual({ branch: 'feat/session-pulse-mod', ahead: 2, behind: 1, changed: 2 })
+  expect(parseGitStatus(out)).toEqual({ branch: 'feat/session-pulse-mod', upstream: 'origin/feat/session-pulse-mod', ahead: 2, behind: 1, changed: 2 })
   expect(parseGitStatus('## main\n')).toEqual({ branch: 'main', ahead: 0, behind: 0, changed: 0 })
   expect(parseGitStatus('## No commits yet on main\n')).toEqual({ branch: 'main', ahead: 0, behind: 0, changed: 0 })
   expect(parseGitStatus('## HEAD (no branch)\n M x\n')).toEqual({ branch: 'detached', ahead: 0, behind: 0, changed: 1 })
@@ -76,4 +76,17 @@ test('the numbers in a value are set as code, the words around them left plain',
     '`1`',
     'off',
   ])
+})
+
+test('a remote reads as its web address, whether written for ssh or https', async () => {
+  for (const remote of ['git@github.com:vdz/skills.git', 'https://github.com/vdz/skills.git', 'ssh://git@github.com/vdz/skills', 'https://github.com/vdz/skills\n']) {
+    expect(webUrl(remote)).toBe('https://github.com/vdz/skills')
+  }
+  expect(webUrl('/srv/git/skills.git')).toBeNull()
+  expect(webUrl('')).toBeNull()
+})
+
+test('a file links by its path, spaces and all', async () => {
+  expect(fileLink('/repo/CLAUDE.md')).toBe('file:///repo/CLAUDE.md')
+  expect(fileLink('/Users/me/Library/Mobile Documents/x.md')).toBe('file:///Users/me/Library/Mobile%20Documents/x.md')
 })

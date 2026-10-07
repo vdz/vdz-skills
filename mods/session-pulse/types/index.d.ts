@@ -20,6 +20,8 @@ declare module 'claude-code' {
       pulse: SessionPulse | null
       history: SessionPulse[]
       errors: SessionPulseErrors
+      /** Whether the pane shows every fact, or the short form; the person's, across sessions. */
+      isExpanded: boolean
     }
   }
 }

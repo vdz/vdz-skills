@@ -34,11 +34,12 @@ export async function boot($: $, on: On, options: { sessionId?: string; entries?
   }))
   // git in the session's folder: a status, or no repository at all (null).
   const git = options.git === undefined ? '## feat/x...origin/feat/x [ahead 2]\n M a.ts\n?? b.ts\n' : options.git
+  const ran = (stdout: string, exitCode = 0) => ({ exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false })
   on('process.run', (_$, e) => ({
     value:
-      e.argv[0] === 'git' && git !== null
-        ? { exitCode: 0, stdout: git, stderr: '', isStdoutTruncated: false, isStderrTruncated: false }
-        : { exitCode: 128, stdout: '', stderr: 'not a git repository', isStdoutTruncated: false, isStderrTruncated: false },
+      e.argv[0] !== 'git' || git === null ? ran('', 128)
+      : e.argv[1] === 'remote' ? (e.argv[3] === 'origin' ? ran('git@github.com:vdz/skills.git\n') : ran('', 2))
+      : ran(git),
   }))
   // Tools: `false` fails, as the shell's own does; anything else succeeds.
   on('tool.call', (_$, e) =>

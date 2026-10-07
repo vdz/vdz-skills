@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { ElementConstructor, EngineInterface, Register, TextProps } from 'claude-code'
 
 import type { SessionPulse, SessionPulseErrors } from '../types'
-import { codeNumbers, footerLabel, formatPulse, parseGitStatus, parsePulseLine, pulseParts, splitPulseLine, timeLeft, tokens } from './pulse'
+import { codeNumbers, fileLink, footerLabel, formatPulse, parseGitStatus, webUrl, parsePulseLine, pulseParts, splitPulseLine, timeLeft, tokens } from './pulse'
 import type { GitStatus } from './pulse'
 import type { Part, Tone } from './pulse'
 
@@ -25,6 +25,9 @@ const RULE = [
 const pulse = atom({ plugin: 'session-pulse', key: 'pulse' } as const, null as SessionPulse | null)
 const history = atom({ plugin: 'session-pulse', key: 'history' } as const, [] as SessionPulse[])
 const errors = atom({ plugin: 'session-pulse', key: 'errors' } as const, { count: 0 } as SessionPulseErrors)
+const isExpanded = atom({ plugin: 'session-pulse', key: 'isExpanded' } as const, false)
+// The person's choice of short or full, kept for every session, not per session.
+const PANE_KEY = 'pane'
 
 // `errors` is absent from what an earlier version saved.
 type Saved = { pulse: SessionPulse | null; history: SessionPulse[]; errors?: SessionPulseErrors }
@@ -113,21 +116,40 @@ function Typeset(props: { Text: ElementConstructor<TextProps>; parts: Part[]; is
 
 const STALE_NOTE: Part = { text: ' (stale: the last reply carried no Pulse line)', tone: 'faint' }
 const LIMIT_NAMES: Record<string, string> = { five_hour: '5h', seven_day: '7d' }
+const USAGE_PAGE = 'https://claude.ai/settings/usage'
+// What the pane shows before `more`: the context and what the session spends.
+const SHORT = new Set(['context', '5h', '7d', 'cost'])
 
 // One row of the pane's facts: a name, its value, and a hint saying what it counts.
-type Fact = { name: string; value: string; hint: string; isCode?: boolean }
+// `href` makes the value a link; a hint with `isHintMarkdown` carries links of its own.
+type Fact = { name: string; value: string; hint: string; isCode?: boolean; href?: string; isAlarm?: boolean; isHintMarkdown?: boolean }
 
 // A memory file by its last two path segments: `.claude/CLAUDE.md`.
 const tail = (path: string) => path.split('/').slice(-2).join('/')
 
-// git in the session's folder, or null outside a repository (or when git fails).
-async function gitStatus($: EngineInterface): Promise<GitStatus | null> {
+// git in the session's folder: its stdout, or null when it fails (outside a repository).
+async function git($: EngineInterface, ...args: string[]): Promise<string | null> {
   try {
-    const run = await $.process.run(['git', 'status', '--porcelain', '--branch'], { timeoutMs: 3000 })
-    return run.exitCode === 0 ? parseGitStatus(run.stdout) : null
+    const run = await $.process.run(['git', ...args], { timeoutMs: 3000 })
+    return run.exitCode === 0 ? run.stdout : null
   } catch {
     return null
   }
+}
+
+async function gitStatus($: EngineInterface): Promise<GitStatus | null> {
+  const out = await git($, 'status', '--porcelain', '--branch')
+  return out === null ? null : parseGitStatus(out)
+}
+
+// Where the branch was pushed, on the web: `<repo>/tree/<branch>`, or undefined for
+// a branch with no upstream or a remote with no web address.
+async function branchUrl($: EngineInterface, upstream: string | undefined): Promise<string | undefined> {
+  if (upstream === undefined) return undefined
+  const [remote = '', ...rest] = upstream.split('/')
+  const remoteUrl = await git($, 'remote', 'get-url', remote)
+  const web = remoteUrl === null ? null : webUrl(remoteUrl)
+  return web === null || rest.length === 0 ? undefined : `${web}/tree/${rest.join('/')}`
 }
 
 // The pane's facts in three blocks: the context window, the usage limits and cost,
@@ -154,23 +176,31 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
     if (files.length > 0) {
       const total = files.reduce((sum, file) => sum + file.tokens, 0)
       const value = `${tokens(total)} · ${files.length} file${files.length === 1 ? '' : 's'}`
-      window.push({ name: 'memory', value, hint: files.map(file => `${tail(file.path)} ${tokens(file.tokens)}`).join(' · ') })
+      const hint = files.map(file => `[${tail(file.path)}](${fileLink(file.path)}) ${tokens(file.tokens)}`).join(' · ')
+      window.push({ name: 'memory', value, hint, isHintMarkdown: true })
     }
   }
   const limits: Fact[] = usage.rateLimits.map(limit => {
     const hint = limit.resetsAt === undefined ? '' : `resets in ${timeLeft(Date.parse(limit.resetsAt) - now)}`
-    return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, value: `${Math.round(limit.percentUsed)}% used`, hint }
+    return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, value: `${Math.round(limit.percentUsed)}% used`, hint, href: USAGE_PAGE }
   })
   if (usage.cost !== undefined) limits.push({ name: 'cost', value: `$${usage.cost.usd.toFixed(2)}`, hint: 'at API prices' })
   const failed = await read($, errors)
   const work: Fact[] = [
-    { name: 'errors', value: String(failed.count), hint: failed.last === undefined ? 'failed tool calls' : `last: ${failed.last}` },
+    {
+      name: 'errors',
+      value: String(failed.count),
+      hint: failed.last === undefined ? 'failed tool calls' : `last: ${failed.last}`,
+      isAlarm: failed.count > 0,
+    },
   ]
-  const git = await gitStatus($)
-  if (git !== null) {
-    const away = [git.ahead > 0 ? `${git.ahead} ahead` : '', git.behind > 0 ? `${git.behind} behind` : ''].filter(Boolean).join(', ')
-    work.push({ name: 'branch', value: git.branch, isCode: true, hint: away === '' ? 'level with upstream' : away })
-    work.push({ name: 'changes', value: `${git.changed} file${git.changed === 1 ? '' : 's'}`, hint: 'uncommitted' })
+  const status = await gitStatus($)
+  if (status !== null) {
+    const away = [status.ahead > 0 ? `${status.ahead} ahead` : '', status.behind > 0 ? `${status.behind} behind` : ''].filter(Boolean).join(', ')
+    const href = await branchUrl($, status.upstream)
+    const hint = status.upstream === undefined ? 'not pushed' : away === '' ? 'level with upstream' : away
+    work.push({ name: 'branch', value: status.branch, isCode: true, hint, ...(href === undefined ? {} : { href }) })
+    work.push({ name: 'changes', value: `${status.changed} file${status.changed === 1 ? '' : 's'}`, hint: 'uncommitted' })
   }
   return [window, limits, work].filter(block => block.length > 0)
 }
@@ -193,6 +223,8 @@ export const register: Register = on => {
       await $.command.register({ name: COMMAND, description: "Where this session stands: whose move, which step, what's next.", argumentHint: '[pane]' })
     } catch {}
     await sync($)
+    const prefs = (await $.store.get(PANE_KEY)) as { isExpanded?: boolean } | undefined
+    await update($, isExpanded, () => prefs?.isExpanded === true)
     return next(e)
   })
 
@@ -251,13 +283,26 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     await sync($)
-    const { Box, Markdown, Text } = $.ui.resolve(e)
+    const { Box, Button, Markdown, Text } = $.ui.resolve(e)
     const current = await read($, pulse)
     const before = earlier(current, await read($, history))
-    const blocks = await facts($)
+    const isFull = await read($, isExpanded)
+    const all = await facts($)
+    // Short: the context and what the session spends, one block, no hints.
+    const blocks = isFull ? all : [all.flat().filter(f => SHORT.has(f.name)).map(f => ({ ...f, hint: '' }))]
     const set = (p: SessionPulse, isMuted?: boolean) => (
       <Typeset Text={Text} parts={[...pulseParts(p), ...(p.isStale ? [STALE_NOTE] : [])]} isMuted={isMuted} />
     )
+    const value = (u: Fact) => {
+      if (u.isAlarm === true) return <Text color="error">{u.value}</Text>
+      const text = u.isCode ? `\`${u.value}\`` : codeNumbers(u.value)
+      return <Markdown text={u.href === undefined ? text : `[${text}](${u.href})`} />
+    }
+    const toggle = async () => {
+      const isNow = !(await read($, isExpanded))
+      await update($, isExpanded, () => isNow)
+      await $.store.set(PANE_KEY, { isExpanded: isNow })
+    }
     // The facts as two columns, the name quiet and the value plain, each with its hint
     // beneath in the faintest grey (no element sets a smaller size).
     const NAME_CELLS = 9
@@ -277,15 +322,18 @@ export const register: Register = on => {
               <Box width={NAME_CELLS}>
                 <Text {...QUIET}>{u.name}</Text>
               </Box>
-              <Markdown text={u.isCode ? `\`${u.value}\`` : codeNumbers(u.value)} />
+              {value(u)}
             </Box>
             {u.hint === '' ? null : (
               <Box marginLeft={NAME_CELLS}>
-                <Text color="subtle">{u.hint}</Text>
+                {u.isHintMarkdown === true ? <Markdown text={u.hint} dimColor /> : <Text color="subtle">{u.hint}</Text>}
               </Box>
             )}
           </Box>
         )))}
+        <Box marginTop={1}>
+          <Button key="pulse-more" label={isFull ? 'less ▴' : 'more ▾'} plain onPress={toggle} />
+        </Box>
       </Box>
     )
   })

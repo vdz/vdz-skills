@@ -80,7 +80,7 @@ export function codeNumbers(value: string): string {
   return value.replace(/\$?\d[\d.,]*[k%]?/g, number => `\`${number}\``)
 }
 
-export type GitStatus = { branch: string; ahead: number; behind: number; changed: number }
+export type GitStatus = { branch: string; upstream?: string; ahead: number; behind: number; changed: number }
 
 // `git status --porcelain --branch`: its header line names the branch and how far
 // it is from its upstream; every other line is one uncommitted file.
@@ -88,8 +88,22 @@ export function parseGitStatus(out: string): GitStatus {
   const [head = '', ...files] = out.split('\n').filter(line => line !== '')
   const name = head.replace(/^## /, '').replace(/^No commits yet on /, '')
   const branch = name.startsWith('HEAD (no branch)') ? 'detached' : (name.split('...')[0] ?? '').split(' ')[0] ?? ''
+  const upstream = name.match(/\.\.\.(\S+)/)?.[1]
   const count = (word: string) => Number(head.match(new RegExp(`${word} (\\d+)`))?.[1] ?? 0)
-  return { branch, ahead: count('ahead'), behind: count('behind'), changed: files.length }
+  return { branch, ...(upstream === undefined ? {} : { upstream }), ahead: count('ahead'), behind: count('behind'), changed: files.length }
+}
+
+// A git remote as the web address of its repository: `git@github.com:o/r.git` and
+// `https://github.com/o/r.git` both read `https://github.com/o/r`. Null for a
+// remote with no host, a folder on disk.
+export function webUrl(remote: string): string | null {
+  const match = remote.trim().match(/^(?:https?:\/\/|ssh:\/\/)?(?:[^@/]+@)?([^/:]+\.[^/:]+)[:/](.+?)(?:\.git)?\/?$/)
+  return match ? `https://${match[1]}/${match[2]}` : null
+}
+
+// A file on disk as a link the reply's own renderer opens.
+export function fileLink(path: string): string {
+  return `file://${encodeURI(path)}`
 }
 
 // The reply with its Pulse line taken off the end, or null when it ends in none.
