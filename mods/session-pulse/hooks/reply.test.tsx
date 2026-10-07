@@ -9,8 +9,10 @@ test('the Pulse line stays in the reply, drawn dim beneath the rest', async ($, 
   await boot($, on)
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: PLUGIN, surface, requestId: `r-${surface}`, ...message(`Tests are green.\n\n${LINE}`) })
-    const lines = await ui.findAll({ type: 'Text', text: LINE })
+    // Markdown: its dimColor is the one opacity the desktop page honours (a Text's is not).
+    const lines = await ui.findAll({ type: 'Markdown', text: LINE })
     expect(lines.map(t => t.props.dimColor)).toEqual([true])
+    expect(await ui.find({ type: 'Text', text: LINE })).toBeUndefined()
     expect(await ui.find({ type: 'Text', text: /^Tests are green\.$/ })).toBeTruthy()
     await ui.unmount()
   }

@@ -184,15 +184,14 @@ export const register: Register = on => {
     if (e.surface !== 'terminal' && e.surface !== 'desktop') return next(e)
     const split = splitPulseLine(e.props.text)
     if (split === null) return next(e)
-    const { Box, Text } = $.ui.resolve(e)
+    const { Box, Markdown } = $.ui.resolve(e)
     const body = split.body === '' ? null : await next({ ...e, props: { ...e.props, text: split.body } })
+    // Markdown, not Text: its dimColor is the one opacity the desktop page honours.
     return (
       <Box flexDirection="column">
         {body}
         <Box marginTop={body === null ? 0 : 1}>
-          <Text key="pulse-line" dimColor>
-            {split.line}
-          </Text>
+          <Markdown key="pulse-line" text={split.line} dimColor />
         </Box>
       </Box>
     )
