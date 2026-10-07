@@ -12,11 +12,17 @@ const paneOf = async ($: $, surface: 'desktop' | 'terminal' = 'desktop') => {
 }
 const fresh = () => void (isExpanded = false)
 
+// A row as read: its hover tips left out, code marks dropped, a link as its text.
 const row = async (pane: Awaited<ReturnType<typeof paneOf>>, name: string) => {
   const box = await pane.find({ key: `u-${name}` })
-  // As read: code marks dropped, a link as its text.
-  return box?.text?.replaceAll('`', '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+  const tips = (await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none').map(b => b.text ?? '')
+  return tips
+    .reduce((text, tip) => (tip === '' ? text : text.replaceAll(tip, '')), box?.text ?? '')
+    .replaceAll('`', '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
 }
+const tipOf = async (pane: Awaited<ReturnType<typeof paneOf>>, key: string) =>
+  (await pane.find({ key: `tip-${key}` }))?.text
 
 test('the pane shows the room left before auto-compact, and the memory loaded', async ($, on) => {
   fresh()
@@ -54,6 +60,7 @@ test('pressing the last error lists the last five, newest first', async ($, on) 
   for (const n of [1, 2, 3, 4, 5, 6]) await $.tool.call({ tool: 'Bash', command: `false ${n}` } as never)
   const pane = await paneOf($)
   expect(await row(pane, 'errors')).toMatch(/^errors6.*last: Bash · Exit code 6/)
+  expect(await tipOf(pane, 'errors')).toMatch(/show the last 5 failed calls$/)
   await pane.press({ key: 'pulse-errors' })
   expect(seen.toasts.at(-1)).toBe(['Last 5 of 6 failed tool calls:', ...[6, 5, 4, 3, 2].map(n => `Bash · Exit code ${n}`)].join('\n'))
   await pane.unmount()
@@ -68,6 +75,7 @@ test('the pane shows the branch, linked to its upstream, and the uncommitted fil
   expect(await row(pane, 'changes')).toMatch(/^changes2 files.*uncommitted: a\.ts · b\.ts$/)
   // Each uncommitted file opens from its name, found from the repository's root.
   expect(await pane.find({ type: 'Markdown', text: 'uncommitted: [a.ts](file:///repo/a.ts) · [b.ts](file:///repo/b.ts)' })).toBeTruthy()
+  expect(await tipOf(pane, 'changes')).toMatch(/open the file$/)
   // The branch is code as a whole, digits and all, and opens where it was pushed.
   expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/tree/feat/x)' })).toBeTruthy()
   await pane.unmount()
@@ -80,6 +88,7 @@ test('a branch with an open pull request links to it, and says which', async ($,
   const pane = await paneOf($)
   expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/pull/42)' })).toBeTruthy()
   expect(await row(pane, 'branch')).toMatch(/PR #42 · 2 ahead$/)
+  expect(await tipOf(pane, 'branch')).toMatch(/PR #42 on GitHub$/)
   await pane.unmount()
 })
 

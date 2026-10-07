@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { ElementConstructor, EngineInterface, Register, TextProps } from 'claude-code'
+import type { BoxProps, ElementConstructor, EngineInterface, Register, TextProps } from 'claude-code'
 
 import type { SessionPulse, SessionPulseErrors } from '../types'
 import { codeNumbers, fileLink, footerLabel, formatPulse, parseGitStatus, webUrl, parsePulseLine, pulseParts, splitPulseLine, timeLeft, tokens } from './pulse'
@@ -114,6 +114,37 @@ function Typeset(props: { Text: ElementConstructor<TextProps>; parts: Part[]; is
   )
 }
 
+// No element carries a title, so each link and button carries a tip of its own: a
+// one-line card over the row above it while the pointer rests there, moving nothing.
+// Drawn on the background user messages use, so it reads over what it covers.
+const TIP_BACKGROUND = 'userMessageBackground'
+function Tip(props: {
+  Box: ElementConstructor<BoxProps>
+  Text: ElementConstructor<TextProps>
+  id: string
+  tip: string
+  side?: 'left' | 'right'
+  children?: unknown
+}) {
+  const { Box, Text, id, tip, side = 'left', children } = props
+  return (
+    <Box key={`tip-${id}`}>
+      {children as never}
+      <Box
+        position="absolute"
+        top={-1}
+        {...(side === 'left' ? { left: 0 } : { right: 0 })}
+        display="none"
+        hover={{ display: 'flex' }}
+        backgroundColor={TIP_BACKGROUND}
+        paddingX={1}
+      >
+        <Text color="inactive">{tip}</Text>
+      </Box>
+    </Box>
+  )
+}
+
 const STALE_NOTE: Part = { text: ' (stale: the last reply carried no Pulse line)', tone: 'faint' }
 const LIMIT_NAMES: Record<string, string> = { five_hour: '5h', seven_day: '7d' }
 const USAGE_PAGE = 'https://claude.ai/settings/usage'
@@ -126,11 +157,12 @@ const SHORT = new Set(['context', '5h', '7d', 'cost'])
 
 // One row of the pane's facts: a name, its value, and a hint saying what it counts.
 // `href` makes the value a link; a hint with `isHintMarkdown` carries links of its own.
-// `onHintPress` makes the hint a button.
+// `onHintPress` makes the hint a button. `tip` says what the row's link or button does.
 type Fact = {
   name: string
   value: string
   hint: string
+  tip?: string
   isCode?: boolean
   href?: string
   isAlarm?: boolean
@@ -208,12 +240,12 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
       const total = files.reduce((sum, file) => sum + file.tokens, 0)
       const value = `${tokens(total)} · ${files.length} file${files.length === 1 ? '' : 's'}`
       const hint = files.map(file => `[${tail(file.path)}](${fileLink(file.path)}) ${tokens(file.tokens)}`).join(' · ')
-      window.push({ name: 'memory', value, hint, isHintMarkdown: true })
+      window.push({ name: 'memory', value, hint, isHintMarkdown: true, tip: 'open the file' })
     }
   }
   const limits: Fact[] = usage.rateLimits.map(limit => {
     const hint = limit.resetsAt === undefined ? '' : `resets in ${timeLeft(Date.parse(limit.resetsAt) - now)}`
-    return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, value: `${Math.round(limit.percentUsed)}% used`, hint, href: USAGE_PAGE }
+    return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, value: `${Math.round(limit.percentUsed)}% used`, hint, href: USAGE_PAGE, tip: 'usage on claude.ai' }
   })
   if (usage.cost !== undefined) limits.push({ name: 'cost', value: `$${usage.cost.usd.toFixed(2)}`, hint: 'at API prices' })
   const failed = await read($, errors)
@@ -223,7 +255,9 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
       value: String(failed.count),
       hint: failed.last === undefined ? 'failed tool calls' : `last: ${failed.last}`,
       isAlarm: failed.count > 0,
-      ...(failed.count > 0 ? { onHintPress: () => listErrors($) } : {}),
+      ...(failed.count > 0
+        ? { onHintPress: () => listErrors($), tip: `show the last ${Math.min(failed.count, ERRORS_LISTED)} failed calls` }
+        : {}),
     },
   ]
   const status = await gitStatus($)
@@ -233,7 +267,8 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
     const href = pr?.url ?? (await branchUrl($, status.upstream))
     const where = status.upstream === undefined ? 'not pushed' : away === '' ? 'level with upstream' : away
     const hint = pr === null ? where : `PR #${pr.number} · ${where}`
-    work.push({ name: 'branch', value: status.branch, isCode: true, hint, ...(href === undefined ? {} : { href }) })
+    const tip = pr === null ? 'branch on GitHub' : `PR #${pr.number} on GitHub`
+    work.push({ name: 'branch', value: status.branch, isCode: true, hint, ...(href === undefined ? {} : { href, tip }) })
     const count = status.files.length
     const root = ((await git($, 'rev-parse', '--show-toplevel')) ?? '').trim()
     const named = status.files.slice(0, FILES_LISTED).map(file => (root === '' ? tail(file) : `[${tail(file)}](${fileLink(`${root}/${file}`)})`))
@@ -243,6 +278,7 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
       value: `${count} file${count === 1 ? '' : 's'}`,
       hint: count === 0 ? 'uncommitted' : `uncommitted: ${files}`,
       isHintMarkdown: true,
+      ...(count > 0 && root !== '' ? { tip: 'open the file' } : {}),
     })
   }
   return [window, limits, work].filter(block => block.length > 0)
@@ -325,7 +361,9 @@ export const register: Register = on => {
     const { Box, Button, Text } = $.ui.resolve(e)
     return (
       <Box flexDirection="row">
-        <Button key="pulse-footer" label={footerLabel(current)} plain dimColor={current.isStale} onPress={() => openPulse($)} />
+        <Tip Box={Box} Text={Text} id="footer" tip={current.isStale ? 'open the Pulse pane (stale)' : 'open the Pulse pane'}>
+          <Button key="pulse-footer" label={footerLabel(current)} plain dimColor={current.isStale} onPress={() => openPulse($)} />
+        </Tip>
         <Text dimColor>{'  '}</Text>
         {rest}
       </Box>
@@ -344,11 +382,17 @@ export const register: Register = on => {
     const set = (p: SessionPulse, isMuted?: boolean) => (
       <Typeset Text={Text} parts={[...pulseParts(p), ...(p.isStale ? [STALE_NOTE] : [])]} isMuted={isMuted} />
     )
+    const tipped = (u: Fact, element: unknown) =>
+      u.tip === undefined ? element : <Tip Box={Box} Text={Text} id={u.name} tip={u.tip}>{element}</Tip>
     const value = (u: Fact) => {
       if (u.isAlarm === true) return <Text color="error">{u.value}</Text>
       const text = u.isCode ? `\`${u.value}\`` : codeNumbers(u.value)
-      return <Markdown text={u.href === undefined ? text : `[${text}](${u.href})`} />
+      return u.href === undefined ? <Markdown text={text} /> : tipped(u, <Markdown text={`[${text}](${u.href})`} />)
     }
+    const hint = (u: Fact) =>
+      u.onHintPress !== undefined ? tipped(u, <Button key={`pulse-${u.name}`} label={u.hint} plain dimColor onPress={u.onHintPress} />)
+      : u.isHintMarkdown === true ? tipped(u, <Markdown text={u.hint} dimColor />)
+      : <Text color="subtle">{u.hint}</Text>
     const toggle = async () => {
       const isNow = !(await read($, isExpanded))
       await update($, isExpanded, () => isNow)
@@ -358,7 +402,8 @@ export const register: Register = on => {
     // beneath in the faintest grey (no element sets a smaller size).
     const NAME_CELLS = 9
     // Every Pulse is a paragraph of its own, a blank line beneath it; a second blank
-    // line sets off the history and each block of facts, no heading and no rule.
+    // line sets off the history and each block of facts, no heading and no rule. The
+    // icon that folds the facts sits at their top right, open or shut.
     return (
       <Box flexDirection="column" paddingX={1}>
         <Box marginBottom={1}>{current === null ? <Text {...QUIET}>No Pulse yet.</Text> : set(current)}</Box>
@@ -367,29 +412,23 @@ export const register: Register = on => {
             {set(p, true)}
           </Box>
         ))}
-        {blocks.flatMap(block => block.map((u, index) => (
-          <Box key={`u-${u.name}`} flexDirection="column" marginTop={index === 0 ? 1 : 0}>
-            <Box flexDirection="row">
-              <Box width={NAME_CELLS}>
-                <Text {...QUIET}>{u.name}</Text>
+        <Box flexDirection="column" marginTop={1} position="relative">
+          {blocks.flatMap((block, at) => block.map((u, index) => (
+            <Box key={`u-${u.name}`} flexDirection="column" marginTop={index === 0 && at > 0 ? 1 : 0}>
+              <Box flexDirection="row">
+                <Box width={NAME_CELLS}>
+                  <Text {...QUIET}>{u.name}</Text>
+                </Box>
+                {value(u) as never}
               </Box>
-              {value(u)}
+              {u.hint === '' ? null : <Box marginLeft={NAME_CELLS}>{hint(u) as never}</Box>}
             </Box>
-            {u.hint === '' ? null : (
-              <Box marginLeft={NAME_CELLS}>
-                {u.onHintPress !== undefined ? (
-                  <Button key={`pulse-${u.name}`} label={u.hint} plain dimColor onPress={u.onHintPress} />
-                ) : u.isHintMarkdown === true ? (
-                  <Markdown text={u.hint} dimColor />
-                ) : (
-                  <Text color="subtle">{u.hint}</Text>
-                )}
-              </Box>
-            )}
+          )))}
+          <Box position="absolute" top={0} right={0}>
+            <Tip Box={Box} Text={Text} id="more" tip={isFull ? 'show the short form' : 'show every fact'} side="right">
+              <Button key="pulse-more" label={isFull ? '▴' : '▾'} plain onPress={toggle} />
+            </Tip>
           </Box>
-        )))}
-        <Box marginTop={1}>
-          <Button key="pulse-more" label={isFull ? 'less ▴' : 'more ▾'} plain onPress={toggle} />
         </Box>
       </Box>
     )

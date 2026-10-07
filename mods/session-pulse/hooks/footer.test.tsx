@@ -10,6 +10,7 @@ test('the footer shows the Pulse beside the mode labels already there', async ($
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: PLUGIN, surface, requestId: `f-${surface}`, ...FOOTER })
     expect(await ui.find({ type: 'Button', text: '◂ your move 3/5' })).toBeTruthy()
+    expect((await ui.find({ key: 'tip-footer' }))?.text).toMatch(/open the Pulse pane$/)
     expect(await ui.find({ type: 'Text', text: 'bypass permissions' })).toBeTruthy()
     await ui.unmount()
   }
@@ -51,15 +52,20 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   expect(await pane.find({ type: 'Markdown', text: '[`61%` used](https://claude.ai/settings/usage)' })).toBeTruthy()
   for (const name of ['compact', 'memory', 'errors', 'branch', 'changes']) expect(await pane.find({ key: `u-${name}` })).toBeUndefined()
   expect(await pane.find({ type: 'Text', text: /^84k of 200k$/ })).toBeUndefined()
+  // The block's top-right icon shows the rest, and says so.
+  expect((await pane.find({ type: 'Button', key: 'pulse-more' }))?.props.label).toBe('▾')
+  expect((await pane.findAll({ type: 'Box' })).some(b => b.props.display === 'none' && b.text === 'show every fact')).toBe(true)
   // `more` shows the rest, each with its hint beneath in the faintest grey.
   await pane.press({ key: 'pulse-more' })
   expect((await pane.find({ type: 'Text', text: /^84k of 200k$/ }))?.props.color).toBe('subtle')
   expect(await pane.find({ type: 'Text', text: /^resets in 2h 10m$/ })).toBeTruthy()
   expect(await pane.find({ type: 'Text', text: /^at API prices$/ })).toBeTruthy()
   expect(await pane.find({ key: 'u-branch' })).toBeTruthy()
-  expect(String((await pane.find({ type: 'Button', key: 'pulse-more' }))?.props.label)).toMatch(/less/)
-  // Nothing waits on a hover.
-  expect((await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none')).toHaveLength(0)
+  expect((await pane.find({ type: 'Button', key: 'pulse-more' }))?.props.label).toBe('▴')
+  // No hint waits on a hover; what hides is only the tip each link and button carries.
+  const hidden = (await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none').map(b => b.text)
+  expect(hidden).toEqual(expect.arrayContaining(['show the short form', 'usage on claude.ai', 'branch on GitHub']))
+  expect(hidden.every(tip => !/^84k of 200k$|^at API prices$/.test(tip ?? ''))).toBe(true)
   await pane.unmount()
   await footer.unmount()
 })
