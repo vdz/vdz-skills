@@ -18,7 +18,7 @@ Tests are green.
   focus-read's Toggle). Click it for the Pulse pane: the Pulse, the last five before it,
   and context %, rate-limit windows and cost as the engine figures them. Where no pane
   can be placed, the same text comes up as a toast.
-- **`/pulse`** answers in place, with no model turn.
+- **`/pulse`** answers in place, with no model turn; `/pulse pane` opens the pane.
 - **Stale.** A reply that leaves work open with no Pulse line keeps the old Pulse,
   marked stale (dimmed in the footer). A done Pulse never goes stale.
 - **Survives** compaction, resume and restart (stored per session id). `/clear` starts
