@@ -12,10 +12,19 @@ const paneOf = async ($: $, surface: 'desktop' | 'terminal' = 'desktop') => {
 }
 const fresh = () => void (isExpanded = false)
 
-// A row as read: code marks dropped, a link as its text.
+// A row as read: its hover cards left out, code marks dropped, a link as its text.
 const row = async (pane: Awaited<ReturnType<typeof paneOf>>, name: string) => {
   const box = await pane.find({ key: `u-${name}` })
-  return box?.text?.replaceAll('`', '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+  const cards = (await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none').map(b => b.text ?? '')
+  return cards
+    .reduce((text, card) => (card === '' ? text : text.replaceAll(card, '')), box?.text ?? '')
+    .replaceAll('`', '')
+    .replace(/\[([^\]]*)\]\([^[]*?\)/g, '$1')
+}
+// The hover cards in a row (the kit keeps no `hover`, so a card is a hidden Box).
+const cardsOf = async (pane: Awaited<ReturnType<typeof paneOf>>, name: string) => {
+  const row = (await pane.find({ key: `u-${name}` }))?.text ?? ''
+  return (await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none' && row.includes(b.text ?? '\0')).map(b => b.text)
 }
 
 test('the pane shows the room left before auto-compact, and the memory loaded', async ($, on) => {
@@ -55,6 +64,7 @@ test('pressing the last error lists the last five, newest first', async ($, on) 
   const pane = await paneOf($)
   expect(await row(pane, 'errors')).toMatch(/^errors6.*last: Bash · Exit code 6/)
   expect((await pane.find({ key: 'pulse-errors' }))?.props.text).toBe('[last: Bash · Exit code 6](https://pulse.invalid/errors "Show the last 5 failed calls")')
+  expect(await cardsOf(pane, 'errors')).toEqual(['Show the last 5 failed calls'])
   await pane.press({ key: 'pulse-errors', link: action('errors') })
   expect(seen.toasts.at(-1)).toBe(['Last 5 of 6 failed tool calls:', ...[6, 5, 4, 3, 2].map(n => `Bash · Exit code ${n}`)].join('\n'))
   await pane.unmount()
@@ -80,6 +90,7 @@ test('a branch with an open pull request links to it, and says which', async ($,
   await reply($, '◂ your move · next: review')
   const pane = await paneOf($)
   expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/pull/42 "PR #42 on GitHub")' })).toBeTruthy()
+  expect(await cardsOf(pane, 'branch')).toEqual(['Open PR #42 on GitHub'])
   expect(await row(pane, 'branch')).toMatch(/PR #42 · 2 ahead$/)
   await pane.unmount()
 })
