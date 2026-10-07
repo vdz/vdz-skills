@@ -1,12 +1,20 @@
 {
   "name": "vdz-skills",
-  "owner": { "name": "Yehuda G" },
+  "owner": {
+    "name": "Yehuda G"
+  },
   "description": "Yehuda's own Claude Code mods.",
   "plugins": [
     {
       "name": "focus-read",
       "source": "./mods/focus-read",
       "description": "Reading focus for assistant replies: the paragraph you hover or pin comes forward, the rest steps back.",
+      "category": "productivity"
+    },
+    {
+      "name": "session-pulse",
+      "source": "./mods/session-pulse",
+      "description": "Keeps the session's where-are-we in view: whose move, which step, the next action, in the footer and /pulse.",
       "category": "productivity"
     }
   ]

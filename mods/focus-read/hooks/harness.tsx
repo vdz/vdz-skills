@@ -16,6 +16,11 @@ export async function boot($: Parameters<TestBody>[0], on: Parameters<TestBody>[
   on('turn.start', (_$, e) => ({ turnId: e.turnId }))
   on('turn.complete', () => ({ text: '' }))
   on('command.run', () => ({ text: '' }))
+  // The engine's own mode labels, which the Toggle must keep.
+  on('ui.render', { component: 'SessionMode' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text key="engine-modes">{e.props.modes.join(' & ')}</Text>
+  })
   // The engine's own drawing of a reply, for the cases the mod passes through.
   on('ui.render', { component: 'AssistantMessage' }, ($, e) => {
     const { Text } = $.ui.resolve(e)

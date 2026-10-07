@@ -123,7 +123,7 @@ test('the footer button toggles the mode and every reply follows', async ($, on)
   const footer = await $.ui.mount({ plugin: 'focus-read', surface: 'desktop', requestId: 'footer', ...FOOTER })
   const reply = await $.ui.mount({ plugin: 'focus-read', surface: 'desktop', requestId: 'b1', ...REPLY })
   const label = async () => (await footer.findAll({ type: 'Button' }))[0]?.props.label
-  expect(await footer.find({ type: 'Text' })).toBeDefined()
+  expect(await footer.find({ type: 'Text', text: /^memory paused$/ })).toBeTruthy()
   expect(await label()).toBe('◐ focus')
   expect(await reply.findAll({ type: 'Client' })).toHaveLength(3)
 

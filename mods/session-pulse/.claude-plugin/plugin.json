@@ -1,0 +1,9 @@
+{
+  "name": "session-pulse",
+  "version": "0.1.0",
+  "author": {
+    "name": "Yehuda G"
+  },
+  "description": "Keeps the session's where-are-we in view: whose move it is, which step, the next action. Claude writes a Pulse line, the footer shows it, /pulse answers with no model turn.",
+  "types": "./types/index.d.ts"
+}

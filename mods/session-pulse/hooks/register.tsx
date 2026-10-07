@@ -1,0 +1,205 @@
+import { atom, read, update } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
+
+import type { SessionPulse } from '../types'
+import { footerLabel, formatPulse, parsePulseLine, splitPulseLine } from './pulse'
+
+const COMMAND = 'pulse'
+const HISTORY_KEPT = 50
+const HISTORY_SHOWN = 5
+
+// What the model reads beside every prompt, never shown to the person: the rule
+// the CLAUDE.md "restate state every turn" line used to carry, plus where things stand.
+const RULE = [
+  'Pulse line: while work is open, end every reply with exactly one line of the form',
+  '`<glyph> <move> · <n>/<m> · next: <next action>`, glyph+move one of',
+  '`▸ working` (you are proceeding), `◂ your move` (waiting on the user), `■ blocked`, `✓ done`.',
+  'Leave out `n/m` when there are no counted steps. When the work is finished, end with `✓ done`.',
+  'No Pulse line on replies that open no work.',
+].join(' ')
+
+// The Pulse and its history for drawing, mirrored into the store under the
+// session's id so they outlive compaction, resume and a restart.
+const pulse = atom({ plugin: 'session-pulse', key: 'pulse' } as const, null as SessionPulse | null)
+const history = atom({ plugin: 'session-pulse', key: 'history' } as const, [] as SessionPulse[])
+
+type Saved = { pulse: SessionPulse | null; history: SessionPulse[] }
+const storeKey = (sessionId: string) => `session:${sessionId}`
+
+// Which session's Pulse the atoms hold, and whether the last one ended in /clear
+// (its history then carries into the next). The module's own: a reload reloads.
+let loadedFor: string | null = null
+let isCleared = false
+
+// /clear and /resume continue under a new session id, and session.start does not
+// fire after /clear, so every hook that reads or writes the Pulse syncs first.
+async function sync($: EngineInterface) {
+  const id = await $.session.id()
+  if (id === loadedFor) return
+  loadedFor = id
+  const saved = (await $.store.get(storeKey(id))) as Saved | undefined
+  if (saved) {
+    await update($, pulse, () => saved.pulse)
+    await update($, history, () => saved.history)
+  } else {
+    await update($, pulse, () => null)
+    if (!isCleared) await update($, history, () => [])
+  }
+  isCleared = false
+}
+
+async function save($: EngineInterface) {
+  const saved: Saved = { pulse: await read($, pulse), history: await read($, history) }
+  await $.store.set(storeKey(await $.session.id()), saved)
+}
+
+const describe = (p: SessionPulse) =>
+  `${formatPulse(p)}${p.isStale ? ' (stale: the last reply carried no Pulse line)' : ''}`
+
+async function report($: EngineInterface) {
+  const current = await read($, pulse)
+  const earlier = (await read($, history)).filter(p => p !== current).slice(-HISTORY_SHOWN).reverse()
+  const gauges = await meters($)
+  return [
+    current === null ? 'No Pulse yet.' : describe(current),
+    ...(earlier.length === 0 ? [] : ['', 'Earlier:', ...earlier.map(p => `  ${formatPulse(p)}`)]),
+    ...(gauges === '' ? [] : ['', gauges]),
+  ].join('\n')
+}
+
+const PANE = 'session-pulse'
+const LIMIT_NAMES: Record<string, string> = { five_hour: '5h', seven_day: '7d' }
+
+// The meters: context fill, each rate-limit window and the session's cost, as the
+// engine itself figures them (no price table of the mod's own).
+async function meters($: EngineInterface) {
+  const usage = await $.session.usage()
+  return [
+    ...(usage.context.percent === undefined ? [] : [`context ${Math.round(usage.context.percent)}%`]),
+    ...usage.rateLimits.map(limit => `${LIMIT_NAMES[limit.kind] ?? limit.kind} ${Math.round(limit.percentUsed)}%`),
+    ...(usage.cost === undefined ? [] : [`$${usage.cost.usd.toFixed(2)}`]),
+  ].join(' · ')
+}
+
+// A press is the person asking, so the pane seats at any width; where the surface
+// still has no room for it, the Pulse comes up as a toast instead.
+async function openPulse($: EngineInterface) {
+  const opened = await $.ui.open({ id: PANE, title: 'Pulse' })
+  if (!opened.isPlaced) await $.ui.toast(await report($))
+}
+
+export const register: Register = on => {
+  on('session.start', async ($, e, next) => {
+    try {
+      await $.command.register({ name: COMMAND, description: "Where this session stands: whose move, which step, what's next." })
+    } catch {}
+    await sync($)
+    return next(e)
+  })
+
+  on('session.end', async ($, e, next) => {
+    if (e.reason === 'clear') {
+      isCleared = true
+      await update($, pulse, () => null)
+    }
+    return next(e)
+  })
+
+  on('turn.complete', async ($, e, next) => {
+    const result = await next(e)
+    if (e.agentId !== undefined || e.reason !== 'answer') return result
+    await sync($)
+    const line = parsePulseLine(e.answer)
+    if (line === null) {
+      // Work left open with no word on it: keep the Pulse, say it may be out of date.
+      const current = await read($, pulse)
+      if (current !== null && current.move !== 'done' && !current.isStale) {
+        await update($, pulse, () => ({ ...current, isStale: true }))
+        await save($)
+      }
+      return result
+    }
+    const fresh: SessionPulse = { ...line, at: await $.clock.now(), isStale: false }
+    await update($, pulse, () => fresh)
+    await update($, history, list => [...list, fresh].slice(-HISTORY_KEPT))
+    await save($)
+    return result
+  })
+
+  on('prompt.submit', async ($, e, next) => {
+    await sync($)
+    const current = await read($, pulse)
+    const now = current === null ? [] : [`Current Pulse: ${describe(current)}`]
+    return next({ ...e, context: [...(e.context ?? []), [RULE, ...now].join('\n')] })
+  })
+
+  // The footer: the Pulse as one plain button ahead of whatever the engine and the
+  // other mods there draw, so focus-read's Toggle and the mode labels stay.
+  on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
+    const rest = await next(e)
+    if (e.surface !== 'terminal' && e.surface !== 'desktop') return rest
+    const current = await read($, pulse)
+    if (current === null) return rest
+    const { Box, Button, Text } = $.ui.resolve(e)
+    return (
+      <Box flexDirection="row">
+        <Button key="pulse-footer" label={footerLabel(current)} plain dimColor={current.isStale} onPress={() => openPulse($)} />
+        <Text dimColor>{'  '}</Text>
+        {rest}
+      </Box>
+    )
+  })
+
+  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    await sync($)
+    const { Box, Text } = $.ui.resolve(e)
+    const current = await read($, pulse)
+    const earlier = (await read($, history)).filter(p => p !== current).slice(-HISTORY_SHOWN).reverse()
+    const gauges = await meters($)
+    return (
+      <Box flexDirection="column" paddingX={1}>
+        {current === null ? <Text dimColor>No Pulse yet.</Text> : <Text bold>{describe(current)}</Text>}
+        {earlier.length === 0 ? null : (
+          <Box flexDirection="column" marginTop={1}>
+            <Text dimColor>Earlier</Text>
+            {earlier.map((p, index) => (
+              <Text key={`h${index}`} dimColor>
+                {formatPulse(p)}
+              </Text>
+            ))}
+          </Box>
+        )}
+        {gauges === '' ? null : (
+          <Box marginTop={1}>
+            <Text dimColor>{gauges}</Text>
+          </Box>
+        )}
+      </Box>
+    )
+  })
+
+  // The Pulse line stays in the reply, so nothing is hidden state, but drawn dim
+  // beneath the rest. The body goes down the chain, so focus-read still splits it.
+  on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
+    if (e.surface !== 'terminal' && e.surface !== 'desktop') return next(e)
+    const split = splitPulseLine(e.props.text)
+    if (split === null) return next(e)
+    const { Box, Text } = $.ui.resolve(e)
+    const body = split.body === '' ? null : await next({ ...e, props: { ...e.props, text: split.body } })
+    return (
+      <Box flexDirection="column">
+        {body}
+        <Box marginTop={body === null ? 0 : 1}>
+          <Text key="pulse-line" dimColor>
+            {split.line}
+          </Text>
+        </Box>
+      </Box>
+    )
+  })
+
+  on('command.run', { command: COMMAND }, async $ => {
+    await sync($)
+    return { text: await report($) }
+  })
+}

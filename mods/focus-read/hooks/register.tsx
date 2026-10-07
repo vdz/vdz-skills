@@ -106,14 +106,17 @@ export const register: Register = on => {
   // footer, the engine's own labels kept before them. One flips the Mode, the
   // other names the Style and moves to the next.
   on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
-    if (e.surface !== 'terminal' && e.surface !== 'desktop') return next(e)
+    // What the engine and the mods beneath draw there (the mode labels, a Pulse)
+    // comes first, so this mod never hides theirs.
+    const rest = await next(e)
+    if (e.surface !== 'terminal' && e.surface !== 'desktop') return rest
     const isOn = await read($, mode)
     const current = await read($, style)
     const { Box, Button, Text } = $.ui.resolve(e)
-    const modes = e.props.modes.join(' & ')
     return (
       <Box flexDirection="row">
-        {modes === '' ? null : <Text dimColor>{`${modes} & `}</Text>}
+        {rest}
+        {e.props.modes.length === 0 ? null : <Text dimColor>{' & '}</Text>}
         <Button
           key="focus-toggle"
           label={isOn ? '◐ focus' : '○ focus'}
