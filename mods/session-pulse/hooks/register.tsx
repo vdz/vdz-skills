@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { BoxProps, ElementConstructor, EngineInterface, Register, TextProps } from 'claude-code'
+import type { ElementConstructor, EngineInterface, MarkdownProps, Register, TextProps } from 'claude-code'
 
 import type { SessionPulse, SessionPulseErrors } from '../types'
 import { codeNumbers, fileLink, footerLabel, formatPulse, parseGitStatus, webUrl, parsePulseLine, pulseParts, splitPulseLine, timeLeft, tokens } from './pulse'
@@ -114,37 +114,6 @@ function Typeset(props: { Text: ElementConstructor<TextProps>; parts: Part[]; is
   )
 }
 
-// No element carries a title, so each link and button carries a tip of its own: a
-// one-line card over the row above it while the pointer rests there, moving nothing.
-// Drawn on the background user messages use, so it reads over what it covers.
-const TIP_BACKGROUND = 'userMessageBackground'
-function Tip(props: {
-  Box: ElementConstructor<BoxProps>
-  Text: ElementConstructor<TextProps>
-  id: string
-  tip: string
-  side?: 'left' | 'right'
-  children?: unknown
-}) {
-  const { Box, Text, id, tip, side = 'left', children } = props
-  return (
-    <Box key={`tip-${id}`}>
-      {children as never}
-      <Box
-        position="absolute"
-        top={-1}
-        {...(side === 'left' ? { left: 0 } : { right: 0 })}
-        display="none"
-        hover={{ display: 'flex' }}
-        backgroundColor={TIP_BACKGROUND}
-        paddingX={1}
-      >
-        <Text color="inactive">{tip}</Text>
-      </Box>
-    </Box>
-  )
-}
-
 const STALE_NOTE: Part = { text: ' (stale: the last reply carried no Pulse line)', tone: 'faint' }
 const LIMIT_NAMES: Record<string, string> = { five_hour: '5h', seven_day: '7d' }
 const USAGE_PAGE = 'https://claude.ai/settings/usage'
@@ -158,12 +127,12 @@ const SHORT = new Set(['context', '5h', '7d', 'cost'])
 // One row of the pane's facts: a name, its value, and a hint saying what it counts.
 // `href` makes the value a link; a hint with `isHintMarkdown` carries links of its own.
 // `href` makes the value a link, `title` its tooltip. `onHintPress` makes the hint a
-// button; with no title for a button, `tip` says what it does on hover.
+// control, `hintTitle` saying what it does.
 type Fact = {
   name: string
   value: string
   hint: string
-  tip?: string
+  hintTitle?: string
   isCode?: boolean
   href?: string
   title?: string
@@ -174,6 +143,33 @@ type Fact = {
 
 // A markdown link with a title, which an HTML surface shows as its native tooltip.
 const link = (text: string, href: string, title: string) => `[${text}](${href} "${title.replaceAll('"', "'")}")`
+
+// A control: a link the mod answers itself, so the surface opens nothing, and so it
+// carries a title, the native tooltip saying what a press does (no Button can).
+// Its href goes nowhere (`.invalid` never resolves) in case a surface opens it anyway.
+const actionHref = (id: string) => `https://pulse.invalid/${id}`
+const escapeLabel = (label: string) => label.replace(/[[\]\\]/g, char => `\\${char}`)
+function Action(props: {
+  Markdown: ElementConstructor<MarkdownProps>
+  id: string
+  name: string
+  label: string
+  title: string
+  isDim?: boolean
+  onPress: () => Promise<void>
+}) {
+  const { Markdown, id, name, label, title, isDim = false, onPress } = props
+  const href = actionHref(id)
+  return (
+    <Markdown
+      key={name}
+      text={link(escapeLabel(label), href, title)}
+      dimColor={isDim}
+      pressableLinks={[href]}
+      onLinkPress={() => void onPress()}
+    />
+  )
+}
 
 // A memory file by its last two path segments: `.claude/CLAUDE.md`.
 const tail = (path: string) => path.split('/').slice(-2).join('/')
@@ -261,7 +257,7 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
       hint: failed.last === undefined ? 'failed tool calls' : `last: ${failed.last}`,
       isAlarm: failed.count > 0,
       ...(failed.count > 0
-        ? { onHintPress: () => listErrors($), tip: `show the last ${Math.min(failed.count, ERRORS_LISTED)} failed calls` }
+        ? { onHintPress: () => listErrors($), hintTitle: `Show the last ${Math.min(failed.count, ERRORS_LISTED)} failed calls` }
         : {}),
     },
   ]
@@ -362,12 +358,11 @@ export const register: Register = on => {
     if (e.surface !== 'terminal' && e.surface !== 'desktop') return rest
     const current = await read($, pulse)
     if (current === null) return rest
-    const { Box, Button, Text } = $.ui.resolve(e)
+    const { Box, Markdown, Text } = $.ui.resolve(e)
+    const title = current.isStale ? 'Open the Pulse pane (this Pulse may be out of date)' : 'Open the Pulse pane'
     return (
       <Box flexDirection="row">
-        <Tip Box={Box} Text={Text} id="footer" tip={current.isStale ? 'open the Pulse pane (stale)' : 'open the Pulse pane'}>
-          <Button key="pulse-footer" label={footerLabel(current)} plain dimColor={current.isStale} onPress={() => openPulse($)} />
-        </Tip>
+        <Action Markdown={Markdown} id="open" name="pulse-footer" label={footerLabel(current)} title={title} isDim={current.isStale} onPress={() => openPulse($)} />
         <Text dimColor>{'  '}</Text>
         {rest}
       </Box>
@@ -376,7 +371,7 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     await sync($)
-    const { Box, Button, Markdown, Text } = $.ui.resolve(e)
+    const { Box, Markdown, Text } = $.ui.resolve(e)
     const current = await read($, pulse)
     const before = earlier(current, await read($, history))
     const isFull = await read($, isExpanded)
@@ -392,28 +387,32 @@ export const register: Register = on => {
       return <Markdown text={u.href === undefined ? text : link(text, u.href, u.title ?? u.href)} />
     }
     const hint = (u: Fact) =>
-      u.onHintPress !== undefined ? <Button key={`pulse-${u.name}`} label={u.hint} plain dimColor onPress={u.onHintPress} />
+      u.onHintPress !== undefined ? (
+        <Action Markdown={Markdown} id={u.name} name={`pulse-${u.name}`} label={u.hint} title={u.hintTitle ?? u.hint} isDim onPress={u.onHintPress} />
+      )
       : u.isHintMarkdown === true ? <Markdown text={u.hint} dimColor />
       : <Text color="subtle">{u.hint}</Text>
-    // A button's tip (links have titles): at the right end of its own row, over
-    // nothing, while the pointer is anywhere on the fact. Short, there are none.
-    const tipOf = (u: Fact) =>
-      !isFull || u.tip === undefined ? null : (
-        <Box position="absolute" top={0} right={0} display="none" hover={{ display: 'flex' }} backgroundColor={TIP_BACKGROUND} paddingX={1}>
-          <Text color="inactive">{u.tip}</Text>
-        </Box>
-      )
     const toggle = async () => {
       const isNow = !(await read($, isExpanded))
       await update($, isExpanded, () => isNow)
       await $.store.set(PANE_KEY, { isExpanded: isNow })
     }
     // The icon that folds the facts, in the flow at the end of their first row: a
-    // pointer on a placed Box is on its parent, so a Button in one is never pressed.
+    // pointer on a placed Box is on its parent, so a control in one is never pressed.
     // Padded on its left with no-break spaces to a target worth aiming at, the glyph
-    // flush with the pane's right edge; no tip, as one opens over it and takes the click.
+    // flush with the pane's right edge. Its title is its tooltip; a hover card would
+    // open over it and take the click.
     const PAD = '\u00a0\u00a0\u00a0\u00a0'
-    const fold = <Button key="pulse-more" label={`${PAD}${isFull ? '▴' : '▾'}`} plain onPress={toggle} />
+    const fold = (
+      <Action
+        Markdown={Markdown}
+        id="fold"
+        name="pulse-more"
+        label={`${PAD}${isFull ? '▴' : '▾'}`}
+        title={isFull ? 'Show the short form' : 'Show every fact'}
+        onPress={toggle}
+      />
+    )
     // The facts as two columns, the name quiet and the value plain, each with its hint
     // beneath in the faintest grey (no element sets a smaller size).
     const NAME_CELLS = 9
@@ -443,7 +442,6 @@ export const register: Register = on => {
                 ) : null}
               </Box>
               {u.hint === '' ? null : <Box marginLeft={NAME_CELLS}>{hint(u)}</Box>}
-              {tipOf(u)}
             </Box>
           )))}
         </Box>

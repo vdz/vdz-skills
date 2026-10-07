@@ -82,3 +82,7 @@ export const reply = ($: $, answer: string, extra: { agentId?: string } = {}) =>
 
 export const pulse = ($: $, args = '') =>
   $.command.run({ command: 'pulse', args, origin: COMPOSER, presentation: { isFullscreen: false, columns: 120 } })
+
+// The pane's and footer's controls are links the mod answers: each has a title, the
+// surface's native tooltip, which no Button can carry.
+export const action = (id: string) => ({ href: `https://pulse.invalid/${id}` })

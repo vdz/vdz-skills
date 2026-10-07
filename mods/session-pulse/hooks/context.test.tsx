@@ -1,28 +1,22 @@
 import { expect, test } from 'claude-code/testing'
 
-import { boot, PLUGIN, reply, type $ } from './harness'
+import { action, boot, PLUGIN, reply, type $ } from './harness'
 
 // The pane with every fact shown: `more` pressed once, which it then remembers.
 let isExpanded = false
 const paneOf = async ($: $, surface: 'desktop' | 'terminal' = 'desktop') => {
   const pane = await $.ui.mount({ plugin: PLUGIN, surface, requestId: 'session-pulse', component: 'Pane', props: { bodyColumns: 40 } as never })
-  if (!isExpanded) await pane.press({ key: 'pulse-more' })
+  if (!isExpanded) await pane.press({ key: 'pulse-more', link: action('fold') })
   isExpanded = true
   return pane
 }
 const fresh = () => void (isExpanded = false)
 
-// A row as read: its hover tips left out, code marks dropped, a link as its text.
+// A row as read: code marks dropped, a link as its text.
 const row = async (pane: Awaited<ReturnType<typeof paneOf>>, name: string) => {
   const box = await pane.find({ key: `u-${name}` })
-  const tips = (await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none').map(b => b.text ?? '')
-  return tips
-    .reduce((text, tip) => (tip === '' ? text : text.replaceAll(tip, '')), box?.text ?? '')
-    .replaceAll('`', '')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+  return box?.text?.replaceAll('`', '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
 }
-// A row's tip, drawn last in it.
-const tipOf = async (pane: Awaited<ReturnType<typeof paneOf>>, name: string) => (await pane.find({ key: `u-${name}` }))?.text
 
 test('the pane shows the room left before auto-compact, and the memory loaded', async ($, on) => {
   fresh()
@@ -60,8 +54,8 @@ test('pressing the last error lists the last five, newest first', async ($, on) 
   for (const n of [1, 2, 3, 4, 5, 6]) await $.tool.call({ tool: 'Bash', command: `false ${n}` } as never)
   const pane = await paneOf($)
   expect(await row(pane, 'errors')).toMatch(/^errors6.*last: Bash · Exit code 6/)
-  expect(await tipOf(pane, 'errors')).toMatch(/show the last 5 failed calls$/)
-  await pane.press({ key: 'pulse-errors' })
+  expect((await pane.find({ key: 'pulse-errors' }))?.props.text).toBe('[last: Bash · Exit code 6](https://pulse.invalid/errors "Show the last 5 failed calls")')
+  await pane.press({ key: 'pulse-errors', link: action('errors') })
   expect(seen.toasts.at(-1)).toBe(['Last 5 of 6 failed tool calls:', ...[6, 5, 4, 3, 2].map(n => `Bash · Exit code ${n}`)].join('\n'))
   await pane.unmount()
 })

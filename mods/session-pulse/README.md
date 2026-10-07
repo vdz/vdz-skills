@@ -23,7 +23,7 @@ Tests are green.
   the branch and its uncommitted files. The choice of short or full is remembered. Links:
   the limits open claude.ai's usage page, the branch its pull request (or its tree), each
   memory and uncommitted file itself; the last failure lists the last five. Every link and
-  button names what it does in a tip on hover. Where no pane can be placed, the same text comes up as a toast.
+  control names what it does in its native tooltip. Where no pane can be placed, the same text comes up as a toast.
 - **`/pulse`** answers in place, with no model turn; `/pulse pane` opens the pane.
 - **Stale.** A reply that leaves work open with no Pulse line keeps the old Pulse,
   marked stale (dimmed in the footer). A done Pulse never goes stale.
