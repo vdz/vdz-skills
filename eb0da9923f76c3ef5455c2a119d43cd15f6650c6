@@ -1,0 +1,31 @@
+.claude-plugin/marketplace.json
+  3724d48248cf99fb 1-13
+
+CONTEXT.md
+  3724d48248cf99fb 52-69
+
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "base_commit_sha": "2bb34614cc56f32b3782a495e9c10b8b75f8f295",
+  "prompts": {
+    "3724d48248cf99fb": {
+      "tool": "unknown",
+      "id": "79ae11fb-26d8-4458-9009-80678f86b18f",
+      "model": "unknown",
+      "author": {
+        "human": "Yehuda Gilead <545253+vdz@users.noreply.github.com>"
+      },
+      "total_additions": 31,
+      "total_deletions": 0,
+      "sparkey": {
+        "attribution_precision": "commit"
+      }
+    }
+  },
+  "sparkey": {
+    "client_version": ""
+  }
+}
+Sparkey-Session-Id: 79ae11fb-26d8-4458-9009-80678f86b18f
+Sparkey-Contributor-Uuid: 25f5f227-833d-47fa-9e95-a7511bdf660d
