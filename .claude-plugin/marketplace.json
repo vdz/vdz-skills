@@ -1,0 +1,13 @@
+{
+  "name": "vdz-skills",
+  "owner": { "name": "Yehuda G" },
+  "description": "Yehuda's own Claude Code mods.",
+  "plugins": [
+    {
+      "name": "focus-read",
+      "source": "./mods/focus-read",
+      "description": "Reading focus for assistant replies: the paragraph you hover or pin comes forward, the rest steps back.",
+      "category": "productivity"
+    }
+  ]
+}

@@ -49,3 +49,21 @@ mode.
   the next.
 - **Generating** — the span from a turn's start to its completion. Dim zero, Deep dim and
   Focus all hold while Generating, so earlier Replies stay readable while agents work.
+
+## session-pulse mod
+
+A Claude Code mod (`mods/session-pulse`) that keeps one session's "where are we" in view, so
+the person never has to ask `status?` and Claude never has to remember to restate it.
+
+- **Pulse** — the session's current answer to "where are we": which step of how many,
+  whose move it is, and the Next action. One Pulse per session; it survives compaction,
+  resume and restart. `/clear` starts a fresh Pulse, but the earlier ones stay in the
+  session's history.
+- **Pulse line** — the Pulse as written by Claude: one fixed line at the end of a reply.
+  It stays visible in the reply, drawn quietly, so the Pulse is never hidden state.
+- **Next action** — the one concrete thing that moves the work forward, small enough to do
+  in a couple of minutes.
+- **Stale** — a Pulse whose latest reply did not carry a Pulse line. It is still shown,
+  marked as possibly out of date, and never guessed at.
+- **Step** — one bounded piece of the work, counted as "N of M". Only the main
+  conversation moves the Step; subagent replies never change the Pulse.
