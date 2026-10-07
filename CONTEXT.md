@@ -67,3 +67,8 @@ the person never has to ask `status?` and Claude never has to remember to restat
   marked as possibly out of date, and never guessed at.
 - **Step** — one bounded piece of the work, counted as "N of M". Only the main
   conversation moves the Step; subagent replies never change the Pulse.
+- **Move** — whose turn the work is on, one of four: **working** `▸` (Claude is
+  proceeding), **your move** `◂` (waiting on the person for a decision, review or
+  approval), **blocked** `■` (stuck or broken), **done** `✓` (nothing open). Always a glyph
+  with its word, never colour alone. A done Pulse is never Stale.
+  _Avoid_: health, status colour, red/yellow/green (those mean PR risk elsewhere).
