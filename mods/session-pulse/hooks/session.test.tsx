@@ -55,3 +55,19 @@ test('/clear starts a fresh Pulse and keeps the earlier ones in the history', as
   await reply($, '▸ working · next: start the new thing')
   expect((await pulse($)).text).toMatch(/^▸ working · next: start the new thing/)
 })
+
+test("the current Pulse is never listed again under Earlier, even reloaded from the store", async ($, on) => {
+  const older = { move: 'working', next: 'write the parser', at: 1, isStale: false }
+  const current = { move: 'your move', next: 'approve the PR', at: 2, isStale: false }
+  await boot($, on, { entries: { 'session:s1': { pulse: { ...current }, history: [older, { ...current }] } } })
+  const { text } = await pulse($)
+  expect(text?.match(/approve the PR/g)).toHaveLength(1)
+  expect(text).toContain('▸ working · next: write the parser')
+})
+
+test('/pulse pane opens the Pulse pane', async ($, on) => {
+  const { seen } = await boot($, on)
+  await reply($, '◂ your move · next: approve the PR')
+  await pulse($, 'pane')
+  expect(seen.panes).toEqual(['session-pulse'])
+})

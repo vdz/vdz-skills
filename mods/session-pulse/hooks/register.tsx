@@ -53,16 +53,24 @@ async function save($: EngineInterface) {
   await $.store.set(storeKey(await $.session.id()), saved)
 }
 
+// The Pulses before the current one, newest first. The current one is always the
+// history's last entry; matched by time, not identity, as a Pulse read back from the
+// store is a copy and a Stale one keeps its time.
+function earlier(current: SessionPulse | null, list: SessionPulse[]) {
+  const isLastCurrent = current !== null && list.at(-1)?.at === current.at
+  return (isLastCurrent ? list.slice(0, -1) : list).slice(-HISTORY_SHOWN).reverse()
+}
+
 const describe = (p: SessionPulse) =>
   `${formatPulse(p)}${p.isStale ? ' (stale: the last reply carried no Pulse line)' : ''}`
 
 async function report($: EngineInterface) {
   const current = await read($, pulse)
-  const earlier = (await read($, history)).filter(p => p !== current).slice(-HISTORY_SHOWN).reverse()
+  const before = earlier(current, await read($, history))
   const gauges = await meters($)
   return [
     current === null ? 'No Pulse yet.' : describe(current),
-    ...(earlier.length === 0 ? [] : ['', 'Earlier:', ...earlier.map(p => `  ${formatPulse(p)}`)]),
+    ...(before.length === 0 ? [] : ['', 'Earlier:', ...before.map(p => `  ${formatPulse(p)}`)]),
     ...(gauges === '' ? [] : ['', gauges]),
   ].join('\n')
 }
@@ -91,7 +99,7 @@ async function openPulse($: EngineInterface) {
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     try {
-      await $.command.register({ name: COMMAND, description: "Where this session stands: whose move, which step, what's next." })
+      await $.command.register({ name: COMMAND, description: "Where this session stands: whose move, which step, what's next.", argumentHint: '[pane]' })
     } catch {}
     await sync($)
     return next(e)
@@ -154,15 +162,15 @@ export const register: Register = on => {
     await sync($)
     const { Box, Text } = $.ui.resolve(e)
     const current = await read($, pulse)
-    const earlier = (await read($, history)).filter(p => p !== current).slice(-HISTORY_SHOWN).reverse()
+    const before = earlier(current, await read($, history))
     const gauges = await meters($)
     return (
       <Box flexDirection="column" paddingX={1}>
         {current === null ? <Text dimColor>No Pulse yet.</Text> : <Text bold>{describe(current)}</Text>}
-        {earlier.length === 0 ? null : (
+        {before.length === 0 ? null : (
           <Box flexDirection="column" marginTop={1}>
             <Text dimColor>Earlier</Text>
-            {earlier.map((p, index) => (
+            {before.map((p, index) => (
               <Text key={`h${index}`} dimColor>
                 {formatPulse(p)}
               </Text>
@@ -197,8 +205,12 @@ export const register: Register = on => {
     )
   })
 
-  on('command.run', { command: COMMAND }, async $ => {
+  on('command.run', { command: COMMAND }, async ($, e) => {
     await sync($)
+    if (e.args.trim().toLowerCase() === 'pane') {
+      await openPulse($)
+      return { text: 'Pulse pane opened.' }
+    }
     return { text: await report($) }
   })
 }
