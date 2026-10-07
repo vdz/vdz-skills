@@ -52,6 +52,9 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   expect(await pane.find({ type: 'Text', text: /^resets 2h 10m$/ })).toBeTruthy()
   expect(await pane.find({ type: 'Markdown', text: '`$3.20`' })).toBeTruthy()
   expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/tree/feat/x)' })).toBeTruthy()
+  // Narrow, the detail drops beneath the value, aligned with it; the name stays at the top.
+  expect((await pane.find({ key: 'u-memory' }))?.props.alignItems).toBe('flex-start')
+  expect((await pane.find({ key: 'v-memory' }))?.props).toMatchObject({ flexWrap: 'wrap', minWidth: 0, flexShrink: 1 })
   // Nothing folds, and nothing waits on a hover.
   expect(await pane.find({ key: 'u-compact' })).toBeUndefined()
   expect(await pane.find({ type: 'Markdown', text: /pulse\.invalid\/fold|▾|▴/ })).toBeUndefined()

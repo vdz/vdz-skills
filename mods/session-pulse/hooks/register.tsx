@@ -350,8 +350,9 @@ export const register: Register = on => {
       }
       return u.isDetailMarkdown === true ? <Markdown text={text} dimColor /> : <Text color="subtle">{text}</Text>
     }
-    // Two columns, the name quiet; the value, then its detail, which wraps in its own
-    // column when the pane is narrow.
+    // Two columns, the name quiet and at the top. Right of it the value and its detail
+    // share a wrapping line: where the pane is too narrow for both, the detail drops
+    // beneath the value, aligned with it, and wraps there across the column's width.
     const NAME_CELLS = 9
     // Every Pulse is a paragraph of its own; a blank line sets off the history and each
     // block of facts, no heading and no rule.
@@ -366,16 +367,18 @@ export const register: Register = on => {
         {blocks.map((block, at) => (
           <Box key={`b${at}`} flexDirection="column" marginTop={1}>
             {block.map(u => (
-              <Box key={`u-${u.name}`} flexDirection="row">
+              <Box key={`u-${u.name}`} flexDirection="row" alignItems="flex-start">
                 <Box width={NAME_CELLS} flexShrink={0}>
                   <Text {...QUIET}>{u.name}</Text>
                 </Box>
-                <Box flexShrink={0}>{value(u)}</Box>
-                {u.detail === undefined ? null : (
-                  <Box marginLeft={2} flexShrink={1}>
-                    {detail(u, u.detail)}
-                  </Box>
-                )}
+                <Box key={`v-${u.name}`} flexDirection="row" flexWrap="wrap" columnGap={2} flexGrow={1} flexShrink={1} minWidth={0}>
+                  <Box flexShrink={0}>{value(u)}</Box>
+                  {u.detail === undefined ? null : (
+                    <Box flexShrink={1} minWidth={0}>
+                      {detail(u, u.detail)}
+                    </Box>
+                  )}
+                </Box>
               </Box>
             ))}
           </Box>
