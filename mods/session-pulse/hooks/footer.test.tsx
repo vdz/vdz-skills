@@ -9,19 +9,18 @@ test('the footer shows the Pulse beside the mode labels already there', async ($
   await reply($, '◂ your move · 3/5 · next: approve the PR')
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: PLUGIN, surface, requestId: `f-${surface}`, ...FOOTER })
-    expect(await ui.find({ type: 'Button', text: '◂ 3/5 · next: approve the PR' })).toBeTruthy()
+    expect(await ui.find({ type: 'Button', text: '◂ your move 3/5' })).toBeTruthy()
     expect(await ui.find({ type: 'Text', text: 'bypass permissions' })).toBeTruthy()
     await ui.unmount()
   }
 })
 
-test('a long Next action is cut short in the footer', async ($, on) => {
+test('a long Next action stays out of the footer, which the desktop crops past ~20 characters', async ($, on) => {
   await boot($, on)
-  await reply($, '▸ working · next: wire the Jira transition into the release flow and then tell the team')
+  await reply($, '▸ working · 12/20 · next: wire the Jira transition into the release flow and then tell the team')
   const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', requestId: 'f-long', ...FOOTER })
-  const button = await ui.find({ type: 'Button', text: /^▸ next: wire the Jira/ })
-  expect(String(button?.props.label).length).toBeLessThanOrEqual(52)
-  expect(String(button?.props.label)).toMatch(/…$/)
+  const label = String((await ui.find({ type: 'Button' }))?.props.label)
+  expect(label).toBe('▸ working 12/20')
   await ui.unmount()
 })
 
@@ -43,6 +42,9 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   expect(await pane.find({ type: 'Text', text: '◂ your move · 3/3 · next: approve the PR' })).toBeTruthy()
   expect(await pane.find({ type: 'Text', text: '▸ working · 1/3 · next: write the parser' })).toBeTruthy()
   expect(await pane.find({ type: 'Text', text: /context 42%.*5h 61%.*\$3\.20/ })).toBeTruthy()
+  // Each entry is a paragraph of its own: the Pulse and every Earlier entry.
+  const spaced = (await pane.findAll({ type: 'Box' })).filter(b => b.props.marginBottom === 1)
+  expect(spaced).toHaveLength(2)
   await pane.unmount()
   await footer.unmount()
 })

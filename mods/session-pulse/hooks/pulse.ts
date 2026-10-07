@@ -34,16 +34,25 @@ export function formatPulse(line: PulseLine): string {
   ].join(' · ')
 }
 
-const NEXT_SHOWN = 40
-
-// The footer's short form: the glyph alone stands for the Move once a Next action
-// follows it, and that Next action is cut to fit beside the mode labels.
+// The footer label: the Move and the Step, nothing more. The desktop footer crops
+// past about 20 characters, so the Next action lives in the pane and the reply.
 export function footerLabel(line: PulseLine): string {
-  const glyph = GLYPH_OF[line.move]
-  const step = line.step ? [`${line.step.n}/${line.step.of}`] : []
-  if (!line.next || line.move === 'done') return [`${glyph} ${line.move}`, ...step].join(' · ')
-  const next = line.next.length > NEXT_SHOWN ? `${line.next.slice(0, NEXT_SHOWN - 1).trimEnd()}…` : line.next
-  return [glyph, ...step.map(s => `${s} ·`), `next: ${next}`].join(' ')
+  const step = line.step ? ` ${line.step.n}/${line.step.of}` : ''
+  return `${GLYPH_OF[line.move]} ${line.move}${step}`
+}
+
+export type Tone = 'strong' | 'plain' | 'faint'
+export type Part = { text: string; tone: Tone }
+
+// The Pulse line as typeset parts: the Move strong, the Step and Next action plain,
+// the separators and the "next:" faint enough almost to disappear. Joined, the
+// parts read exactly as formatPulse.
+export function pulseParts(line: PulseLine): Part[] {
+  const parts: Part[] = [{ text: `${GLYPH_OF[line.move]} ${line.move}`, tone: 'strong' }]
+  const gap: Part = { text: ' · ', tone: 'faint' }
+  if (line.step) parts.push(gap, { text: `${line.step.n}/${line.step.of}`, tone: 'plain' })
+  if (line.next) parts.push(gap, { text: 'next: ', tone: 'faint' }, { text: line.next, tone: 'plain' })
+  return parts
 }
 
 // The reply with its Pulse line taken off the end, or null when it ends in none.

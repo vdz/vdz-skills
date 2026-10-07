@@ -1,8 +1,9 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { ElementConstructor, EngineInterface, Register, TextProps } from 'claude-code'
 
 import type { SessionPulse } from '../types'
-import { footerLabel, formatPulse, parsePulseLine, splitPulseLine } from './pulse'
+import { footerLabel, formatPulse, parsePulseLine, pulseParts, splitPulseLine } from './pulse'
+import type { Part, Tone } from './pulse'
 
 const COMMAND = 'pulse'
 const HISTORY_KEPT = 50
@@ -76,6 +77,33 @@ async function report($: EngineInterface) {
 }
 
 const PANE = 'session-pulse'
+
+// The desktop page ignores a Text's dimColor but honours its color, so there the
+// tones are translucent greys that read on a light page and a dark one alike.
+const MUTED = 'rgba(128, 128, 128, 0.9)'
+const FAINT = 'rgba(128, 128, 128, 0.35)'
+
+// A Pulse line set in its tones: the Move bold, the separators all but gone.
+// Muted is the voice of a line that sits beside other things: the reply, Earlier.
+function Typeset(props: { Text: ElementConstructor<TextProps>; surface: string; parts: Part[]; isMuted?: boolean }) {
+  const { Text, surface, parts, isMuted = false } = props
+  const style = (tone: Tone): TextProps => {
+    const bold = tone === 'strong' ? true : undefined
+    if (surface === 'desktop') return { bold, color: tone === 'faint' ? FAINT : isMuted ? MUTED : undefined }
+    return { bold, dimColor: tone === 'faint' || isMuted ? true : undefined }
+  }
+  return (
+    <Text>
+      {parts.map((part, index) => (
+        <Text key={`t${index}`} {...style(part.tone)}>
+          {part.text}
+        </Text>
+      ))}
+    </Text>
+  )
+}
+
+const STALE_NOTE: Part = { text: ' (stale: the last reply carried no Pulse line)', tone: 'faint' }
 const LIMIT_NAMES: Record<string, string> = { five_hour: '5h', seven_day: '7d' }
 
 // The meters: context fill, each rate-limit window and the session's cost, as the
@@ -164,24 +192,21 @@ export const register: Register = on => {
     const current = await read($, pulse)
     const before = earlier(current, await read($, history))
     const gauges = await meters($)
+    const quiet: TextProps = e.surface === 'desktop' ? { color: MUTED } : { dimColor: true }
+    const set = (p: SessionPulse, isMuted?: boolean) => (
+      <Typeset Text={Text} surface={e.surface} parts={[...pulseParts(p), ...(p.isStale ? [STALE_NOTE] : [])]} isMuted={isMuted} />
+    )
+    // Every entry is a paragraph of its own, a blank line beneath it.
     return (
       <Box flexDirection="column" paddingX={1}>
-        {current === null ? <Text dimColor>No Pulse yet.</Text> : <Text bold>{describe(current)}</Text>}
-        {before.length === 0 ? null : (
-          <Box flexDirection="column" marginTop={1}>
-            <Text dimColor>Earlier</Text>
-            {before.map((p, index) => (
-              <Text key={`h${index}`} dimColor>
-                {formatPulse(p)}
-              </Text>
-            ))}
+        <Box marginBottom={1}>{current === null ? <Text {...quiet}>No Pulse yet.</Text> : set(current)}</Box>
+        {before.length === 0 ? null : <Text {...quiet}>Earlier</Text>}
+        {before.map((p, index) => (
+          <Box key={`h${index}`} marginBottom={1}>
+            {set(p, true)}
           </Box>
-        )}
-        {gauges === '' ? null : (
-          <Box marginTop={1}>
-            <Text dimColor>{gauges}</Text>
-          </Box>
-        )}
+        ))}
+        {gauges === '' ? null : <Text {...quiet}>{gauges}</Text>}
       </Box>
     )
   })
@@ -192,14 +217,14 @@ export const register: Register = on => {
     if (e.surface !== 'terminal' && e.surface !== 'desktop') return next(e)
     const split = splitPulseLine(e.props.text)
     if (split === null) return next(e)
-    const { Box, Markdown } = $.ui.resolve(e)
+    const { Box, Text } = $.ui.resolve(e)
+    const line = parsePulseLine(split.line)!
     const body = split.body === '' ? null : await next({ ...e, props: { ...e.props, text: split.body } })
-    // Markdown, not Text: its dimColor is the one opacity the desktop page honours.
     return (
       <Box flexDirection="column">
         {body}
-        <Box marginTop={body === null ? 0 : 1}>
-          <Markdown key="pulse-line" text={split.line} dimColor />
+        <Box key="pulse-line" marginTop={body === null ? 0 : 1}>
+          <Typeset Text={Text} surface={e.surface} parts={pulseParts(line)} isMuted />
         </Box>
       </Box>
     )
