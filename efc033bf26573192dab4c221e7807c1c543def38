@@ -1,0 +1,76 @@
+.claude-plugin/marketplace.json
+  638774b95a471205 3-5,13-18
+
+mods/focus-read/hooks/focus.test.tsx
+  638774b95a471205 126
+
+mods/focus-read/hooks/harness.tsx
+  638774b95a471205 19-23
+
+mods/focus-read/hooks/register.tsx
+  638774b95a471205 109-112,118-119
+
+mods/session-pulse/.claude-plugin/plugin.json
+  638774b95a471205 1-9
+
+mods/session-pulse/.gitignore
+  638774b95a471205 1-2
+
+mods/session-pulse/README.md
+  638774b95a471205 1-41
+
+mods/session-pulse/hooks/footer.test.tsx
+  638774b95a471205 1-57
+
+mods/session-pulse/hooks/harness.tsx
+  638774b95a471205 1-57
+
+mods/session-pulse/hooks/hooks.json
+  638774b95a471205 1
+
+mods/session-pulse/hooks/pulse.test.ts
+  638774b95a471205 1-27
+
+mods/session-pulse/hooks/pulse.ts
+  638774b95a471205 1-55
+
+mods/session-pulse/hooks/register.tsx
+  638774b95a471205 1-205
+
+mods/session-pulse/hooks/reply.test.tsx
+  638774b95a471205 1-26
+
+mods/session-pulse/hooks/session.test.tsx
+  638774b95a471205 1-57
+
+mods/session-pulse/tsconfig.json
+  638774b95a471205 1-3
+
+mods/session-pulse/types/index.d.ts
+  638774b95a471205 1-21
+
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "base_commit_sha": "003d720b591ca15a6b011b42b90d9a46365dd109",
+  "prompts": {
+    "638774b95a471205": {
+      "tool": "claude_code",
+      "id": "79ae11fb-26d8-4458-9009-80678f86b18f",
+      "model": "unknown",
+      "author": {
+        "human": "Yehuda Gilead <545253+vdz@users.noreply.github.com>"
+      },
+      "total_additions": 582,
+      "total_deletions": 5,
+      "sparkey": {
+        "attribution_precision": "commit"
+      }
+    }
+  },
+  "sparkey": {
+    "client_version": ""
+  }
+}
+Sparkey-Session-Id: 79ae11fb-26d8-4458-9009-80678f86b18f
+Sparkey-Contributor-Uuid: 25f5f227-833d-47fa-9e95-a7511bdf660d
