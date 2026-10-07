@@ -382,28 +382,40 @@ export const register: Register = on => {
     const set = (p: SessionPulse, isMuted?: boolean) => (
       <Typeset Text={Text} parts={[...pulseParts(p), ...(p.isStale ? [STALE_NOTE] : [])]} isMuted={isMuted} />
     )
-    const tipped = (u: Fact, element: unknown) =>
-      u.tip === undefined ? element : <Tip Box={Box} Text={Text} id={u.name} tip={u.tip}>{element}</Tip>
     const value = (u: Fact) => {
       if (u.isAlarm === true) return <Text color="error">{u.value}</Text>
       const text = u.isCode ? `\`${u.value}\`` : codeNumbers(u.value)
-      return u.href === undefined ? <Markdown text={text} /> : tipped(u, <Markdown text={`[${text}](${u.href})`} />)
+      return <Markdown text={u.href === undefined ? text : `[${text}](${u.href})`} />
     }
     const hint = (u: Fact) =>
-      u.onHintPress !== undefined ? tipped(u, <Button key={`pulse-${u.name}`} label={u.hint} plain dimColor onPress={u.onHintPress} />)
-      : u.isHintMarkdown === true ? tipped(u, <Markdown text={u.hint} dimColor />)
+      u.onHintPress !== undefined ? <Button key={`pulse-${u.name}`} label={u.hint} plain dimColor onPress={u.onHintPress} />
+      : u.isHintMarkdown === true ? <Markdown text={u.hint} dimColor />
       : <Text color="subtle">{u.hint}</Text>
+    // A fact's tip: at the right end of its own row, over nothing, while the pointer
+    // is anywhere on the fact. Short, the links speak for themselves: no tips.
+    const tipOf = (u: Fact) =>
+      !isFull || u.tip === undefined ? null : (
+        <Box position="absolute" top={0} right={0} display="none" hover={{ display: 'flex' }} backgroundColor={TIP_BACKGROUND} paddingX={1}>
+          <Text color="inactive">{u.tip}</Text>
+        </Box>
+      )
     const toggle = async () => {
       const isNow = !(await read($, isExpanded))
       await update($, isExpanded, () => isNow)
       await $.store.set(PANE_KEY, { isExpanded: isNow })
     }
+    // The icon that folds the facts, in the flow at the end of their first row: a
+    // pointer on a placed Box is on its parent, so a Button in one is never pressed.
+    const fold = (
+      <Tip Box={Box} Text={Text} id="more" tip={isFull ? 'show the short form' : 'show every fact'} side="right">
+        <Button key="pulse-more" label={isFull ? '▴' : '▾'} plain onPress={toggle} />
+      </Tip>
+    )
     // The facts as two columns, the name quiet and the value plain, each with its hint
     // beneath in the faintest grey (no element sets a smaller size).
     const NAME_CELLS = 9
     // Every Pulse is a paragraph of its own, a blank line beneath it; a second blank
-    // line sets off the history and each block of facts, no heading and no rule. The
-    // icon that folds the facts sits at their top right, open or shut.
+    // line sets off the history and each block of facts, no heading and no rule.
     return (
       <Box flexDirection="column" paddingX={1}>
         <Box marginBottom={1}>{current === null ? <Text {...QUIET}>No Pulse yet.</Text> : set(current)}</Box>
@@ -412,23 +424,25 @@ export const register: Register = on => {
             {set(p, true)}
           </Box>
         ))}
-        <Box flexDirection="column" marginTop={1} position="relative">
+        <Box flexDirection="column" marginTop={1}>
           {blocks.flatMap((block, at) => block.map((u, index) => (
             <Box key={`u-${u.name}`} flexDirection="column" marginTop={index === 0 && at > 0 ? 1 : 0}>
               <Box flexDirection="row">
                 <Box width={NAME_CELLS}>
                   <Text {...QUIET}>{u.name}</Text>
                 </Box>
-                {value(u) as never}
+                {value(u)}
+                {at === 0 && index === 0 ? (
+                  <>
+                    <Box flexGrow={1} />
+                    {fold}
+                  </>
+                ) : null}
               </Box>
-              {u.hint === '' ? null : <Box marginLeft={NAME_CELLS}>{hint(u) as never}</Box>}
+              {u.hint === '' ? null : <Box marginLeft={NAME_CELLS}>{hint(u)}</Box>}
+              {tipOf(u)}
             </Box>
           )))}
-          <Box position="absolute" top={0} right={0}>
-            <Tip Box={Box} Text={Text} id="more" tip={isFull ? 'show the short form' : 'show every fact'} side="right">
-              <Button key="pulse-more" label={isFull ? '▴' : '▾'} plain onPress={toggle} />
-            </Tip>
-          </Box>
         </Box>
       </Box>
     )

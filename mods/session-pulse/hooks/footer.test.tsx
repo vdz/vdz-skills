@@ -55,6 +55,11 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   // The block's top-right icon shows the rest, and says so.
   expect((await pane.find({ type: 'Button', key: 'pulse-more' }))?.props.label).toBe('▾')
   expect((await pane.findAll({ type: 'Box' })).some(b => b.props.display === 'none' && b.text === 'show every fact')).toBe(true)
+  // Short, the links need no tips.
+  expect((await pane.findAll({ type: 'Box' })).some(b => b.props.display === 'none' && b.text === 'usage on claude.ai')).toBe(false)
+  // A pointer on a placed Box is on its parent, so nothing pressable sits in one: only hidden tips are placed.
+  const placed = (await pane.findAll({ type: 'Box' })).filter(b => b.props.position === 'absolute')
+  expect(placed.every(b => b.props.display === 'none')).toBe(true)
   // `more` shows the rest, each with its hint beneath in the faintest grey.
   await pane.press({ key: 'pulse-more' })
   expect((await pane.find({ type: 'Text', text: /^84k of 200k$/ }))?.props.color).toBe('subtle')
@@ -66,6 +71,9 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   const hidden = (await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none').map(b => b.text)
   expect(hidden).toEqual(expect.arrayContaining(['show the short form', 'usage on claude.ai', 'branch on GitHub']))
   expect(hidden.every(tip => !/^84k of 200k$|^at API prices$/.test(tip ?? ''))).toBe(true)
+  // Each tip sits at the right end of its own row, over nothing.
+  const tip = (await pane.findAll({ type: 'Box' })).find(b => b.props.display === 'none' && b.text === 'usage on claude.ai')
+  expect(tip?.props).toMatchObject({ position: 'absolute', top: 0, right: 0 })
   await pane.unmount()
   await footer.unmount()
 })

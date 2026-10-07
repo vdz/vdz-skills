@@ -21,8 +21,8 @@ const row = async (pane: Awaited<ReturnType<typeof paneOf>>, name: string) => {
     .replaceAll('`', '')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
 }
-const tipOf = async (pane: Awaited<ReturnType<typeof paneOf>>, key: string) =>
-  (await pane.find({ key: `tip-${key}` }))?.text
+// A row's tip, drawn last in it.
+const tipOf = async (pane: Awaited<ReturnType<typeof paneOf>>, name: string) => (await pane.find({ key: `u-${name}` }))?.text
 
 test('the pane shows the room left before auto-compact, and the memory loaded', async ($, on) => {
   fresh()
