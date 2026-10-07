@@ -406,11 +406,10 @@ export const register: Register = on => {
     }
     // The icon that folds the facts, in the flow at the end of their first row: a
     // pointer on a placed Box is on its parent, so a Button in one is never pressed.
-    const fold = (
-      <Tip Box={Box} Text={Text} id="more" tip={isFull ? 'show the short form' : 'show every fact'} side="right">
-        <Button key="pulse-more" label={isFull ? '▴' : '▾'} plain onPress={toggle} />
-      </Tip>
-    )
+    // Padded with no-break spaces to a target worth aiming at; no tip, as one opens
+    // over the icon and takes the click meant for it.
+    const PAD = '\u00a0\u00a0'
+    const fold = <Button key="pulse-more" label={`${PAD}${isFull ? '▴' : '▾'}${PAD}`} plain onPress={toggle} />
     // The facts as two columns, the name quiet and the value plain, each with its hint
     // beneath in the faintest grey (no element sets a smaller size).
     const NAME_CELLS = 9
