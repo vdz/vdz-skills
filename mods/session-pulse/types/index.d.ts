@@ -11,11 +11,15 @@ export type SessionPulse = {
   isStale: boolean
 }
 
+/** The session's failed tool calls: how many, and the last as "<tool> · <first line>". */
+export type SessionPulseErrors = { count: number; last?: string }
+
 declare module 'claude-code' {
   interface PluginState {
     'session-pulse': {
       pulse: SessionPulse | null
       history: SessionPulse[]
+      errors: SessionPulseErrors
     }
   }
 }

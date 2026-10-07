@@ -1,6 +1,6 @@
 import { mock, type TestBody } from 'claude-code/testing'
 
-type $ = Parameters<TestBody>[0]
+export type $ = Parameters<TestBody>[0]
 type On = Parameters<TestBody>[1]
 
 export const PLUGIN = 'session-pulse'
@@ -8,21 +8,44 @@ export const COMPOSER = { kind: 'composer' } as const
 
 // The test's hooks stand for the engine beneath the mod: a store, a session id,
 // the command registry, the reply and command rows, panes and toasts.
-export async function boot($: $, on: On, options: { sessionId?: string; entries?: Record<string, unknown>; isPaneRefused?: boolean } = {}) {
+export async function boot($: $, on: On, options: { sessionId?: string; entries?: Record<string, unknown>; isPaneRefused?: boolean; git?: string | null } = {}) {
   const session = { id: options.sessionId ?? 's1' }
   const seen = { toasts: [] as string[], panes: [] as string[] }
   mock.clock(on)
   const resetsAt = new Date((2 * 60 + 10) * 60_000).toISOString() // the mock clock starts at 0
   mock.store(on, options.entries)
   on('session.id', () => ({ value: session.id }))
-  on('session.usage', () => ({
+  // The breakdown only when asked for, as the engine counts it only then.
+  const breakdown = {
+    autoCompactThreshold: 160_000,
+    isAutoCompactEnabled: true,
+    memoryFiles: [
+      { path: '/Users/me/.claude/CLAUDE.md', type: 'User', tokens: 2_100 },
+      { path: '/repo/CLAUDE.md', type: 'Project', tokens: 4_100 },
+    ],
+  }
+  on('session.usage', (_$, e) => ({
     value: {
       startedAt: 0,
-      context: { tokens: 84_000, window: 200_000, percent: 42 },
+      context: { tokens: 84_000, window: 200_000, percent: 42, ...(e.breakdown ? { breakdown: breakdown as never } : {}) },
       rateLimits: [{ kind: 'five_hour', percentUsed: 61, resetsAt }],
       cost: { usd: 3.2 },
     },
   }))
+  // git in the session's folder: a status, or no repository at all (null).
+  const git = options.git === undefined ? '## feat/x...origin/feat/x [ahead 2]\n M a.ts\n?? b.ts\n' : options.git
+  on('process.run', (_$, e) => ({
+    value:
+      e.argv[0] === 'git' && git !== null
+        ? { exitCode: 0, stdout: git, stderr: '', isStdoutTruncated: false, isStderrTruncated: false }
+        : { exitCode: 128, stdout: '', stderr: 'not a git repository', isStdoutTruncated: false, isStderrTruncated: false },
+  }))
+  // Tools: `false` fails, as the shell's own does; anything else succeeds.
+  on('tool.call', (_$, e) =>
+    (e.tool === 'Bash' && e.command === 'false'
+      ? { ref: 1, result: {}, text: 'Exit code 1', isError: true }
+      : { ref: 1, result: {}, text: 'ok' }) as never,
+  )
   on('command.register', (_$, e) => ({ value: { command: e.name } }))
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
   on('session.end', (_$, e) => ({ sessionId: e.sessionId }))

@@ -53,7 +53,8 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   expect(await pane.find({ type: 'Text', text: /resets in 2h 10m/ })).toBeTruthy()
   expect(await pane.find({ type: 'Text', text: /API price/ })).toBeTruthy()
   // (The test kit's view of a Box leaves out its hover, the reveal itself.)
-  expect((await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none')).toHaveLength(3)
+  // Eight rows: context, compact, memory; 5h, cost; errors, branch, changes.
+  expect((await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none')).toHaveLength(8)
   await pane.unmount()
   await footer.unmount()
 })

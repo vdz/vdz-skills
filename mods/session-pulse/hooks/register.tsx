@@ -1,8 +1,9 @@
 import { atom, read, update } from 'claude-code'
 import type { ElementConstructor, EngineInterface, Register, TextProps } from 'claude-code'
 
-import type { SessionPulse } from '../types'
-import { footerLabel, formatPulse, parsePulseLine, pulseParts, splitPulseLine, timeLeft } from './pulse'
+import type { SessionPulse, SessionPulseErrors } from '../types'
+import { footerLabel, formatPulse, parseGitStatus, parsePulseLine, pulseParts, splitPulseLine, timeLeft, tokens } from './pulse'
+import type { GitStatus } from './pulse'
 import type { Part, Tone } from './pulse'
 
 const COMMAND = 'pulse'
@@ -23,8 +24,10 @@ const RULE = [
 // session's id so they outlive compaction, resume and a restart.
 const pulse = atom({ plugin: 'session-pulse', key: 'pulse' } as const, null as SessionPulse | null)
 const history = atom({ plugin: 'session-pulse', key: 'history' } as const, [] as SessionPulse[])
+const errors = atom({ plugin: 'session-pulse', key: 'errors' } as const, { count: 0 } as SessionPulseErrors)
 
-type Saved = { pulse: SessionPulse | null; history: SessionPulse[] }
+// `errors` is absent from what an earlier version saved.
+type Saved = { pulse: SessionPulse | null; history: SessionPulse[]; errors?: SessionPulseErrors }
 const storeKey = (sessionId: string) => `session:${sessionId}`
 
 // Which session's Pulse the atoms hold, and whether the last one ended in /clear
@@ -42,7 +45,9 @@ async function sync($: EngineInterface) {
   if (saved) {
     await update($, pulse, () => saved.pulse)
     await update($, history, () => saved.history)
+    await update($, errors, () => saved.errors ?? { count: 0 })
   } else {
+    await update($, errors, () => ({ count: 0 }))
     await update($, pulse, () => null)
     if (!isCleared) await update($, history, () => [])
   }
@@ -50,7 +55,7 @@ async function sync($: EngineInterface) {
 }
 
 async function save($: EngineInterface) {
-  const saved: Saved = { pulse: await read($, pulse), history: await read($, history) }
+  const saved: Saved = { pulse: await read($, pulse), history: await read($, history), errors: await read($, errors) }
   await $.store.set(storeKey(await $.session.id()), saved)
 }
 
@@ -109,35 +114,72 @@ function Typeset(props: { Text: ElementConstructor<TextProps>; parts: Part[]; is
 const STALE_NOTE: Part = { text: ' (stale: the last reply carried no Pulse line)', tone: 'faint' }
 const LIMIT_NAMES: Record<string, string> = { five_hour: '5h', seven_day: '7d' }
 
-type Gauge = { name: string; percent: number; hint: string }
+// One row of the pane's facts: a name, its value, and a hint saying what it counts.
+type Fact = { name: string; value: string; hint: string }
 
 const LIMIT_HINTS: Record<string, string> = { five_hour: 'of the 5-hour usage limit', seven_day: 'of the weekly usage limit' }
-const kilo = (tokens: number) => `${Math.round(tokens / 1000)}k`
+// A memory file by its last two path segments: `.claude/CLAUDE.md`.
+const tail = (path: string) => path.split('/').slice(-2).join('/')
 
-// The gauges: context fill and each rate-limit window, as the engine itself figures
-// them, and the session's cost (no price table of the mod's own). Every figure is
-// used, never remaining; each hint says what it counts.
-async function gauges($: EngineInterface): Promise<{ list: Gauge[]; cost?: string; costHint: string }> {
-  const usage = await $.session.usage()
-  const now = await $.clock.now()
-  const { context } = usage
-  const list = [
-    ...(context.percent === undefined
-      ? []
-      : [{ name: 'context', percent: context.percent, hint: `${kilo(context.tokens ?? 0)} of ${kilo(context.window)} tokens in the window` }]),
-    ...usage.rateLimits.map(limit => {
-      const reset = limit.resetsAt === undefined ? '' : ` · resets in ${timeLeft(Date.parse(limit.resetsAt) - now)}`
-      return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, percent: limit.percentUsed, hint: `${LIMIT_HINTS[limit.kind] ?? 'of this limit'}${reset}` }
-    }),
-  ]
-  const cost = usage.cost === undefined ? undefined : `$${usage.cost.usd.toFixed(2)}`
-  return { list, cost, costHint: 'this session at API prices, as /cost' }
+// git in the session's folder, or null outside a repository (or when git fails).
+async function gitStatus($: EngineInterface): Promise<GitStatus | null> {
+  try {
+    const run = await $.process.run(['git', 'status', '--porcelain', '--branch'], { timeoutMs: 3000 })
+    return run.exitCode === 0 ? parseGitStatus(run.stdout) : null
+  } catch {
+    return null
+  }
 }
 
-// The gauges in one line of text, for /pulse and the toast.
+// The pane's facts in three blocks: the context window, the usage limits and cost,
+// and the work itself. Usage figures are all used, never remaining, as the engine
+// figures them (no price table of the mod's own); each hint says what it counts.
+async function facts($: EngineInterface): Promise<Fact[][]> {
+  const usage = await $.session.usage({ breakdown: 'summary' })
+  const now = await $.clock.now()
+  const { context } = usage
+  const breakdown = context.breakdown
+  const window: Fact[] = []
+  if (context.percent !== undefined) {
+    const hint = `${tokens(context.tokens ?? 0)} of ${tokens(context.window)} tokens in the window`
+    window.push({ name: 'context', value: `${Math.round(context.percent)}% used`, hint })
+  }
+  if (breakdown !== undefined) {
+    const threshold = breakdown.isAutoCompactEnabled ? breakdown.autoCompactThreshold : undefined
+    if (threshold === undefined) window.push({ name: 'compact', value: 'off', hint: 'auto-compact is off' })
+    else {
+      const room = threshold - (context.tokens ?? 0)
+      window.push({ name: 'compact', value: room > 0 ? `in ${tokens(room)}` : 'due', hint: `auto-compact at ${tokens(threshold)} tokens` })
+    }
+    const files = breakdown.memoryFiles
+    if (files.length > 0) {
+      const total = files.reduce((sum, file) => sum + file.tokens, 0)
+      const value = `${tokens(total)} · ${files.length} file${files.length === 1 ? '' : 's'}`
+      window.push({ name: 'memory', value, hint: files.map(file => `${tail(file.path)} ${tokens(file.tokens)}`).join(' · ') })
+    }
+  }
+  const limits: Fact[] = usage.rateLimits.map(limit => {
+    const reset = limit.resetsAt === undefined ? '' : ` · resets in ${timeLeft(Date.parse(limit.resetsAt) - now)}`
+    const hint = `${LIMIT_HINTS[limit.kind] ?? 'of this limit'}${reset}`
+    return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, value: `${Math.round(limit.percentUsed)}% used`, hint }
+  })
+  if (usage.cost !== undefined) limits.push({ name: 'cost', value: `$${usage.cost.usd.toFixed(2)}`, hint: 'this session at API prices, as /cost' })
+  const failed = await read($, errors)
+  const work: Fact[] = [
+    { name: 'errors', value: String(failed.count), hint: failed.last === undefined ? 'failed tool calls this session' : `last: ${failed.last}` },
+  ]
+  const git = await gitStatus($)
+  if (git !== null) {
+    const away = [git.ahead > 0 ? `${git.ahead} ahead` : '', git.behind > 0 ? `${git.behind} behind` : ''].filter(Boolean).join(', ')
+    work.push({ name: 'branch', value: git.branch, hint: away === '' ? 'level with its upstream' : `${away} of upstream` })
+    work.push({ name: 'changes', value: `${git.changed} file${git.changed === 1 ? '' : 's'}`, hint: 'uncommitted in the working tree' })
+  }
+  return [window, limits, work].filter(block => block.length > 0)
+}
+
+// The facts in one line of text, for /pulse and the toast.
 async function meters($: EngineInterface) {
-  const { list, cost } = await gauges($)
-  return [...list.map(g => `${g.name} ${Math.round(g.percent)}% used`), ...(cost === undefined ? [] : [cost])].join(' · ')
+  return (await facts($)).flat().map(f => `${f.name} ${f.value}`).join(' · ')
 }
 
 // A press is the person asking, so the pane seats at any width; where the surface
@@ -214,21 +256,17 @@ export const register: Register = on => {
     const { Box, Text } = $.ui.resolve(e)
     const current = await read($, pulse)
     const before = earlier(current, await read($, history))
-    const { list, cost, costHint } = await gauges($)
+    const blocks = await facts($)
     const set = (p: SessionPulse, isMuted?: boolean) => (
       <Typeset Text={Text} parts={[...pulseParts(p), ...(p.isStale ? [STALE_NOTE] : [])]} isMuted={isMuted} />
     )
-    // The usage as two columns, the name quiet and the value plain, each with a hint
+    // The facts as two columns, the name quiet and the value plain, each with a hint
     // beneath: on the desktop hidden until the pointer is over its row, on the
     // terminal, which has no pointer to hover, shown outright.
     const NAME_CELLS = 9
-    const usage = [
-      ...list.map(g => ({ name: g.name, value: `${Math.round(g.percent)}% used`, hint: g.hint })),
-      ...(cost === undefined ? [] : [{ name: 'cost', value: cost, hint: costHint }]),
-    ]
     const isHover = e.surface === 'desktop'
     // Every Pulse is a paragraph of its own, a blank line beneath it; a second blank
-    // line sets the history and the usage off, no heading and no rule.
+    // line sets off the history and each block of facts, no heading and no rule.
     return (
       <Box flexDirection="column" paddingX={1}>
         <Box marginBottom={1}>{current === null ? <Text {...QUIET}>No Pulse yet.</Text> : set(current)}</Box>
@@ -237,7 +275,7 @@ export const register: Register = on => {
             {set(p, true)}
           </Box>
         ))}
-        {usage.map((u, index) => (
+        {blocks.flatMap(block => block.map((u, index) => (
           <Box key={`u-${u.name}`} flexDirection="column" marginTop={index === 0 ? 1 : 0}>
             <Box flexDirection="row">
               <Box width={NAME_CELLS}>
@@ -249,7 +287,7 @@ export const register: Register = on => {
               <Text color="subtle">{u.hint}</Text>
             </Box>
           </Box>
-        ))}
+        )))}
       </Box>
     )
   })
@@ -271,6 +309,20 @@ export const register: Register = on => {
         </Box>
       </Box>
     )
+  })
+
+  // A failed tool call, the main conversation's or a subagent's, counts as an error.
+  // The call itself passes through untouched.
+  on('tool.call', async ($, e, next) => {
+    const result = await next(e)
+    if (result.isError === true) {
+      await sync($)
+      const first = ((result.text ?? '').split('\n')[0] ?? '').trim()
+      const last = first === '' ? e.tool : `${e.tool} · ${first.length > 48 ? `${first.slice(0, 47)}…` : first}`
+      await update($, errors, failed => ({ count: failed.count + 1, last }))
+      await save($)
+    }
+    return result
   })
 
   on('command.run', { command: COMMAND }, async ($, e) => {

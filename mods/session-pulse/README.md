@@ -14,10 +14,11 @@ Tests are green.
   reply with one line while work is open: `▸ working`, `◂ your move`, `■ blocked` or
   `✓ done`, then `n/m`, then `next: …`. The rule replaces the CLAUDE.md "restate state
   every turn" line. The current Pulse rides along too, so `status?` costs no digging.
-- **Footer.** `◂ 3/5 · next: approve the PR` sits ahead of the mode labels (and
-  focus-read's Toggle). Click it for the Pulse pane: the Pulse, the last five before it,
-  and context %, rate-limit windows and cost as the engine figures them. Where no pane
-  can be placed, the same text comes up as a toast.
+- **Footer.** `◂ your move 3/5` sits ahead of the mode labels (and focus-read's
+  Toggle). Click it for the Pulse pane: the Pulse, the last five before it, then three
+  blocks of facts, each with a hint on hover: context used, room before auto-compact
+  and memory loaded; the usage limits and cost; failed tool calls, the branch and its
+  uncommitted files. Where no pane can be placed, the same text comes up as a toast.
 - **`/pulse`** answers in place, with no model turn; `/pulse pane` opens the pane.
 - **Stale.** A reply that leaves work open with no Pulse line keeps the old Pulse,
   marked stale (dimmed in the footer). A done Pulse never goes stale.

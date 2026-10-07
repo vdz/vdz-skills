@@ -68,6 +68,25 @@ export function timeLeft(ms: number): string {
   return `${m}m`
 }
 
+// A token count read short: "820", "6.2k", "38k".
+export function tokens(n: number): string {
+  if (n < 1000) return String(Math.round(n))
+  if (n < 10_000) return `${(n / 1000).toFixed(1)}k`
+  return `${Math.round(n / 1000)}k`
+}
+
+export type GitStatus = { branch: string; ahead: number; behind: number; changed: number }
+
+// `git status --porcelain --branch`: its header line names the branch and how far
+// it is from its upstream; every other line is one uncommitted file.
+export function parseGitStatus(out: string): GitStatus {
+  const [head = '', ...files] = out.split('\n').filter(line => line !== '')
+  const name = head.replace(/^## /, '').replace(/^No commits yet on /, '')
+  const branch = name.startsWith('HEAD (no branch)') ? 'detached' : (name.split('...')[0] ?? '').split(' ')[0] ?? ''
+  const count = (word: string) => Number(head.match(new RegExp(`${word} (\\d+)`))?.[1] ?? 0)
+  return { branch, ahead: count('ahead'), behind: count('behind'), changed: files.length }
+}
+
 // The reply with its Pulse line taken off the end, or null when it ends in none.
 export function splitPulseLine(reply: string): { body: string; line: string } | null {
   if (parsePulseLine(reply) === null) return null
