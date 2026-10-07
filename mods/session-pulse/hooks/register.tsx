@@ -157,7 +157,8 @@ const SHORT = new Set(['context', '5h', '7d', 'cost'])
 
 // One row of the pane's facts: a name, its value, and a hint saying what it counts.
 // `href` makes the value a link; a hint with `isHintMarkdown` carries links of its own.
-// `onHintPress` makes the hint a button. `tip` says what the row's link or button does.
+// `href` makes the value a link, `title` its tooltip. `onHintPress` makes the hint a
+// button; with no title for a button, `tip` says what it does on hover.
 type Fact = {
   name: string
   value: string
@@ -165,10 +166,14 @@ type Fact = {
   tip?: string
   isCode?: boolean
   href?: string
+  title?: string
   isAlarm?: boolean
   isHintMarkdown?: boolean
   onHintPress?: () => Promise<void>
 }
+
+// A markdown link with a title, which an HTML surface shows as its native tooltip.
+const link = (text: string, href: string, title: string) => `[${text}](${href} "${title.replaceAll('"', "'")}")`
 
 // A memory file by its last two path segments: `.claude/CLAUDE.md`.
 const tail = (path: string) => path.split('/').slice(-2).join('/')
@@ -239,13 +244,13 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
     if (files.length > 0) {
       const total = files.reduce((sum, file) => sum + file.tokens, 0)
       const value = `${tokens(total)} · ${files.length} file${files.length === 1 ? '' : 's'}`
-      const hint = files.map(file => `[${tail(file.path)}](${fileLink(file.path)}) ${tokens(file.tokens)}`).join(' · ')
-      window.push({ name: 'memory', value, hint, isHintMarkdown: true, tip: 'open the file' })
+      const hint = files.map(file => `${link(tail(file.path), fileLink(file.path), file.path)} ${tokens(file.tokens)}`).join(' · ')
+      window.push({ name: 'memory', value, hint, isHintMarkdown: true })
     }
   }
   const limits: Fact[] = usage.rateLimits.map(limit => {
     const hint = limit.resetsAt === undefined ? '' : `resets in ${timeLeft(Date.parse(limit.resetsAt) - now)}`
-    return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, value: `${Math.round(limit.percentUsed)}% used`, hint, href: USAGE_PAGE, tip: 'usage on claude.ai' }
+    return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, value: `${Math.round(limit.percentUsed)}% used`, hint, href: USAGE_PAGE, title: 'Usage on claude.ai' }
   })
   if (usage.cost !== undefined) limits.push({ name: 'cost', value: `$${usage.cost.usd.toFixed(2)}`, hint: 'at API prices' })
   const failed = await read($, errors)
@@ -267,18 +272,17 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
     const href = pr?.url ?? (await branchUrl($, status.upstream))
     const where = status.upstream === undefined ? 'not pushed' : away === '' ? 'level with upstream' : away
     const hint = pr === null ? where : `PR #${pr.number} · ${where}`
-    const tip = pr === null ? 'branch on GitHub' : `PR #${pr.number} on GitHub`
-    work.push({ name: 'branch', value: status.branch, isCode: true, hint, ...(href === undefined ? {} : { href, tip }) })
+    const title = pr === null ? `${status.branch} on GitHub` : `PR #${pr.number} on GitHub`
+    work.push({ name: 'branch', value: status.branch, isCode: true, hint, ...(href === undefined ? {} : { href, title }) })
     const count = status.files.length
     const root = ((await git($, 'rev-parse', '--show-toplevel')) ?? '').trim()
-    const named = status.files.slice(0, FILES_LISTED).map(file => (root === '' ? tail(file) : `[${tail(file)}](${fileLink(`${root}/${file}`)})`))
+    const named = status.files.slice(0, FILES_LISTED).map(file => (root === '' ? tail(file) : link(tail(file), fileLink(`${root}/${file}`), `${root}/${file}`)))
     const files = [...named, ...(count > FILES_LISTED ? [`+${count - FILES_LISTED} more`] : [])].join(' · ')
     work.push({
       name: 'changes',
       value: `${count} file${count === 1 ? '' : 's'}`,
       hint: count === 0 ? 'uncommitted' : `uncommitted: ${files}`,
       isHintMarkdown: true,
-      ...(count > 0 && root !== '' ? { tip: 'open the file' } : {}),
     })
   }
   return [window, limits, work].filter(block => block.length > 0)
@@ -385,14 +389,14 @@ export const register: Register = on => {
     const value = (u: Fact) => {
       if (u.isAlarm === true) return <Text color="error">{u.value}</Text>
       const text = u.isCode ? `\`${u.value}\`` : codeNumbers(u.value)
-      return <Markdown text={u.href === undefined ? text : `[${text}](${u.href})`} />
+      return <Markdown text={u.href === undefined ? text : link(text, u.href, u.title ?? u.href)} />
     }
     const hint = (u: Fact) =>
       u.onHintPress !== undefined ? <Button key={`pulse-${u.name}`} label={u.hint} plain dimColor onPress={u.onHintPress} />
       : u.isHintMarkdown === true ? <Markdown text={u.hint} dimColor />
       : <Text color="subtle">{u.hint}</Text>
-    // A fact's tip: at the right end of its own row, over nothing, while the pointer
-    // is anywhere on the fact. Short, the links speak for themselves: no tips.
+    // A button's tip (links have titles): at the right end of its own row, over
+    // nothing, while the pointer is anywhere on the fact. Short, there are none.
     const tipOf = (u: Fact) =>
       !isFull || u.tip === undefined ? null : (
         <Box position="absolute" top={0} right={0} display="none" hover={{ display: 'flex' }} backgroundColor={TIP_BACKGROUND} paddingX={1}>
@@ -406,10 +410,10 @@ export const register: Register = on => {
     }
     // The icon that folds the facts, in the flow at the end of their first row: a
     // pointer on a placed Box is on its parent, so a Button in one is never pressed.
-    // Padded with no-break spaces to a target worth aiming at; no tip, as one opens
-    // over the icon and takes the click meant for it.
-    const PAD = '\u00a0\u00a0'
-    const fold = <Button key="pulse-more" label={`${PAD}${isFull ? '▴' : '▾'}${PAD}`} plain onPress={toggle} />
+    // Padded on its left with no-break spaces to a target worth aiming at, the glyph
+    // flush with the pane's right edge; no tip, as one opens over it and takes the click.
+    const PAD = '\u00a0\u00a0\u00a0\u00a0'
+    const fold = <Button key="pulse-more" label={`${PAD}${isFull ? '▴' : '▾'}`} plain onPress={toggle} />
     // The facts as two columns, the name quiet and the value plain, each with its hint
     // beneath in the faintest grey (no element sets a smaller size).
     const NAME_CELLS = 9

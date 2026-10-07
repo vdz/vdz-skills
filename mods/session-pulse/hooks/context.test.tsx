@@ -33,7 +33,7 @@ test('the pane shows the room left before auto-compact, and the memory loaded', 
   expect(await row(pane, 'compact')).toMatch(/^compactin 76k.*at 160k$/)
   expect(await row(pane, 'memory')).toMatch(/^memory6\.2k · 2 files.*\.claude\/CLAUDE\.md 2\.1k · repo\/CLAUDE\.md 4\.1k/)
   // Each memory file opens from its name.
-  expect(await pane.find({ type: 'Markdown', text: /\[\.claude\/CLAUDE\.md\]\(file:\/\/\/Users\/me\/\.claude\/CLAUDE\.md\) 2\.1k/ })).toBeTruthy()
+  expect(await pane.find({ type: 'Markdown', text: /\[\.claude\/CLAUDE\.md\]\(file:\/\/\/Users\/me\/\.claude\/CLAUDE\.md "\/Users\/me\/\.claude\/CLAUDE\.md"\) 2\.1k/ })).toBeTruthy()
   await pane.unmount()
 })
 
@@ -74,10 +74,9 @@ test('the pane shows the branch, linked to its upstream, and the uncommitted fil
   expect(await row(pane, 'branch')).toMatch(/^branchfeat\/x.*2 ahead$/)
   expect(await row(pane, 'changes')).toMatch(/^changes2 files.*uncommitted: a\.ts · b\.ts$/)
   // Each uncommitted file opens from its name, found from the repository's root.
-  expect(await pane.find({ type: 'Markdown', text: 'uncommitted: [a.ts](file:///repo/a.ts) · [b.ts](file:///repo/b.ts)' })).toBeTruthy()
-  expect(await tipOf(pane, 'changes')).toMatch(/open the file$/)
+  expect(await pane.find({ type: 'Markdown', text: 'uncommitted: [a.ts](file:///repo/a.ts "/repo/a.ts") · [b.ts](file:///repo/b.ts "/repo/b.ts")' })).toBeTruthy()
   // The branch is code as a whole, digits and all, and opens where it was pushed.
-  expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/tree/feat/x)' })).toBeTruthy()
+  expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/tree/feat/x "feat/x on GitHub")' })).toBeTruthy()
   await pane.unmount()
 })
 
@@ -86,9 +85,8 @@ test('a branch with an open pull request links to it, and says which', async ($,
   await boot($, on, { pr: { number: 42, url: 'https://github.com/vdz/skills/pull/42' } })
   await reply($, '◂ your move · next: review')
   const pane = await paneOf($)
-  expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/pull/42)' })).toBeTruthy()
+  expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/pull/42 "PR #42 on GitHub")' })).toBeTruthy()
   expect(await row(pane, 'branch')).toMatch(/PR #42 · 2 ahead$/)
-  expect(await tipOf(pane, 'branch')).toMatch(/PR #42 on GitHub$/)
   await pane.unmount()
 })
 

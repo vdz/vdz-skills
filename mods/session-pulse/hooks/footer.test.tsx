@@ -49,15 +49,16 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
     expect((await pane.find({ type: 'Text', text: new RegExp(`^${name}$`) }))?.props.color).toBe('inactive')
     expect(await pane.find({ type: 'Markdown', text: value })).toBeTruthy()
   }
-  expect(await pane.find({ type: 'Markdown', text: '[`61%` used](https://claude.ai/settings/usage)' })).toBeTruthy()
+  // Each link names where it goes in its own title: the surface's native tooltip.
+  expect(await pane.find({ type: 'Markdown', text: '[`61%` used](https://claude.ai/settings/usage "Usage on claude.ai")' })).toBeTruthy()
   for (const name of ['compact', 'memory', 'errors', 'branch', 'changes']) expect(await pane.find({ key: `u-${name}` })).toBeUndefined()
   expect(await pane.find({ type: 'Text', text: /^84k of 200k$/ })).toBeUndefined()
-  // The block's top-right icon shows the rest, and says so.
-  // Padded wide enough to hit, and with no tip: one would open over it and take the click.
-  expect((await pane.find({ type: 'Button', key: 'pulse-more' }))?.props.label).toBe('\u00a0\u00a0▾\u00a0\u00a0')
+  // The icon at the pane's right edge shows the rest: padded on its left alone, wide
+  // enough to hit, the glyph flush right; no tip, as one would open over it and take the click.
+  expect((await pane.find({ type: 'Button', key: 'pulse-more' }))?.props.label).toBe('\u00a0\u00a0\u00a0\u00a0▾')
   expect(await pane.find({ key: 'tip-more' })).toBeUndefined()
-  // Short, the links need no tips.
-  expect((await pane.findAll({ type: 'Box' })).some(b => b.props.display === 'none' && b.text === 'usage on claude.ai')).toBe(false)
+  // No hover cards: links carry titles.
+  expect((await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none')).toHaveLength(0)
   // A pointer on a placed Box is on its parent, so nothing pressable sits in one: only hidden tips are placed.
   const placed = (await pane.findAll({ type: 'Box' })).filter(b => b.props.position === 'absolute')
   expect(placed.every(b => b.props.display === 'none')).toBe(true)
@@ -67,14 +68,10 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   expect(await pane.find({ type: 'Text', text: /^resets in 2h 10m$/ })).toBeTruthy()
   expect(await pane.find({ type: 'Text', text: /^at API prices$/ })).toBeTruthy()
   expect(await pane.find({ key: 'u-branch' })).toBeTruthy()
-  expect((await pane.find({ type: 'Button', key: 'pulse-more' }))?.props.label).toBe('\u00a0\u00a0▴\u00a0\u00a0')
-  // No hint waits on a hover; what hides is only the tip each link and button carries.
-  const hidden = (await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none').map(b => b.text)
-  expect(hidden).toEqual(expect.arrayContaining(['usage on claude.ai', 'branch on GitHub']))
-  expect(hidden.every(tip => !/^84k of 200k$|^at API prices$/.test(tip ?? ''))).toBe(true)
-  // Each tip sits at the right end of its own row, over nothing.
-  const tip = (await pane.findAll({ type: 'Box' })).find(b => b.props.display === 'none' && b.text === 'usage on claude.ai')
-  expect(tip?.props).toMatchObject({ position: 'absolute', top: 0, right: 0 })
+  expect((await pane.find({ type: 'Button', key: 'pulse-more' }))?.props.label).toBe('\u00a0\u00a0\u00a0\u00a0▴')
+  expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/tree/feat/x "feat/x on GitHub")' })).toBeTruthy()
+  // No hint waits on a hover, and with no errors yet nothing hides at all.
+  expect((await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none')).toHaveLength(0)
   await pane.unmount()
   await footer.unmount()
 })
