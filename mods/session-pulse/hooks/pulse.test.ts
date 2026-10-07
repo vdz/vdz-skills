@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { footerLabel, parseGitStatus, parsePulseLine, pulseParts, timeLeft, tokens } from './pulse'
+import { codeNumbers, footerLabel, parseGitStatus, parsePulseLine, pulseParts, timeLeft, tokens } from './pulse'
 
 test('a reply ending in a Pulse line yields its Move, Step and Next action', async () => {
   const reply = 'Tests are green.\n\n◂ your move · 3/5 · next: approve the PR'
@@ -65,4 +65,15 @@ test('git status reads as the branch, how far it is from its upstream, and the u
   expect(parseGitStatus('## main\n')).toEqual({ branch: 'main', ahead: 0, behind: 0, changed: 0 })
   expect(parseGitStatus('## No commits yet on main\n')).toEqual({ branch: 'main', ahead: 0, behind: 0, changed: 0 })
   expect(parseGitStatus('## HEAD (no branch)\n M x\n')).toEqual({ branch: 'detached', ahead: 0, behind: 0, changed: 1 })
+})
+
+test('the numbers in a value are set as code, the words around them left plain', async () => {
+  expect(['42% used', 'in 76k', '6.2k · 2 files', '$3.20', '1', 'off'].map(codeNumbers)).toEqual([
+    '`42%` used',
+    'in `76k`',
+    '`6.2k` · `2` files',
+    '`$3.20`',
+    '`1`',
+    'off',
+  ])
 })

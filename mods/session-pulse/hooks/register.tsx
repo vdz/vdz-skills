@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { ElementConstructor, EngineInterface, Register, TextProps } from 'claude-code'
 
 import type { SessionPulse, SessionPulseErrors } from '../types'
-import { footerLabel, formatPulse, parseGitStatus, parsePulseLine, pulseParts, splitPulseLine, timeLeft, tokens } from './pulse'
+import { codeNumbers, footerLabel, formatPulse, parseGitStatus, parsePulseLine, pulseParts, splitPulseLine, timeLeft, tokens } from './pulse'
 import type { GitStatus } from './pulse'
 import type { Part, Tone } from './pulse'
 
@@ -115,7 +115,7 @@ const STALE_NOTE: Part = { text: ' (stale: the last reply carried no Pulse line)
 const LIMIT_NAMES: Record<string, string> = { five_hour: '5h', seven_day: '7d' }
 
 // One row of the pane's facts: a name, its value, and a hint saying what it counts.
-type Fact = { name: string; value: string; hint: string }
+type Fact = { name: string; value: string; hint: string; isCode?: boolean }
 
 const LIMIT_HINTS: Record<string, string> = { five_hour: 'of the 5-hour usage limit', seven_day: 'of the weekly usage limit' }
 // A memory file by its last two path segments: `.claude/CLAUDE.md`.
@@ -171,7 +171,7 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
   const git = await gitStatus($)
   if (git !== null) {
     const away = [git.ahead > 0 ? `${git.ahead} ahead` : '', git.behind > 0 ? `${git.behind} behind` : ''].filter(Boolean).join(', ')
-    work.push({ name: 'branch', value: git.branch, hint: away === '' ? 'level with its upstream' : `${away} of upstream` })
+    work.push({ name: 'branch', value: git.branch, isCode: true, hint: away === '' ? 'level with its upstream' : `${away} of upstream` })
     work.push({ name: 'changes', value: `${git.changed} file${git.changed === 1 ? '' : 's'}`, hint: 'uncommitted in the working tree' })
   }
   return [window, limits, work].filter(block => block.length > 0)
@@ -253,7 +253,7 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     await sync($)
-    const { Box, Text } = $.ui.resolve(e)
+    const { Box, Markdown, Text } = $.ui.resolve(e)
     const current = await read($, pulse)
     const before = earlier(current, await read($, history))
     const blocks = await facts($)
@@ -279,7 +279,7 @@ export const register: Register = on => {
               <Box width={NAME_CELLS}>
                 <Text {...QUIET}>{u.name}</Text>
               </Box>
-              <Text>{u.value}</Text>
+              <Markdown text={u.isCode ? `\`${u.value}\`` : codeNumbers(u.value)} />
             </Box>
             <Box marginLeft={NAME_CELLS}>
               <Text color="subtle">{u.hint}</Text>

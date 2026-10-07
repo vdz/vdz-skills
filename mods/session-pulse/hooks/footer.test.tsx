@@ -43,10 +43,10 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   expect(await pane.find({ type: 'Text', text: '▸ working · 1/3 · next: write the parser' })).toBeTruthy()
   // No heading and no rule: space alone sets the history and the usage off.
   expect(await pane.find({ type: 'Text', text: /Earlier|─|━/ })).toBeUndefined()
-  // The usage as two columns: the name quiet, the value plain and saying what it counts.
-  for (const [name, value] of [['context', '42% used'], ['5h', '61% used'], ['cost', '$3.20']]) {
+  // The usage as two columns: the name quiet, the value saying what it counts, its numbers as code.
+  for (const [name, value] of [['context', '`42%` used'], ['5h', '`61%` used'], ['cost', '`$3.20`']]) {
     expect((await pane.find({ type: 'Text', text: new RegExp(`^${name}$`) }))?.props.color).toBe('inactive')
-    expect(await pane.find({ type: 'Text', text: value })).toBeTruthy()
+    expect(await pane.find({ type: 'Markdown', text: value })).toBeTruthy()
   }
   // Each has a hint beneath it.
   expect(await pane.find({ type: 'Text', text: /84k of 200k tokens/ })).toBeTruthy()

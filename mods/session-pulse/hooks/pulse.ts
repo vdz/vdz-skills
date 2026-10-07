@@ -75,6 +75,11 @@ export function tokens(n: number): string {
   return `${Math.round(n / 1000)}k`
 }
 
+// A value with each number in it set as inline code: "`42%` used", "in `76k`".
+export function codeNumbers(value: string): string {
+  return value.replace(/\$?\d[\d.,]*[k%]?/g, number => `\`${number}\``)
+}
+
 export type GitStatus = { branch: string; ahead: number; behind: number; changed: number }
 
 // `git status --porcelain --branch`: its header line names the branch and how far

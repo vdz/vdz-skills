@@ -7,7 +7,7 @@ const paneOf = ($: $, surface: 'desktop' | 'terminal' = 'desktop') =>
 
 const row = async (pane: Awaited<ReturnType<typeof paneOf>>, name: string) => {
   const box = await pane.find({ key: `u-${name}` })
-  return box?.text
+  return box?.text?.replaceAll('`', '')
 }
 
 test('the pane shows the room left before auto-compact, and the memory loaded', async ($, on) => {
@@ -39,6 +39,8 @@ test('the pane shows the branch and the uncommitted files', async ($, on) => {
   const pane = await paneOf($)
   expect(await row(pane, 'branch')).toMatch(/^branchfeat\/x.*2 ahead of upstream/)
   expect(await row(pane, 'changes')).toMatch(/^changes2 files.*uncommitted/)
+  // The branch is code as a whole, digits and all.
+  expect(await pane.find({ type: 'Markdown', text: '`feat/x`' })).toBeTruthy()
   await pane.unmount()
 })
 
