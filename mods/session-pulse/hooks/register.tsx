@@ -260,11 +260,9 @@ export const register: Register = on => {
     const set = (p: SessionPulse, isMuted?: boolean) => (
       <Typeset Text={Text} parts={[...pulseParts(p), ...(p.isStale ? [STALE_NOTE] : [])]} isMuted={isMuted} />
     )
-    // The facts as two columns, the name quiet and the value plain, each with a hint
-    // beneath: on the desktop hidden until the pointer is over its row, on the
-    // terminal, which has no pointer to hover, shown outright.
+    // The facts as two columns, the name quiet and the value plain, each with its hint
+    // beneath in the faintest grey (no element sets a smaller size).
     const NAME_CELLS = 9
-    const isHover = e.surface === 'desktop'
     // Every Pulse is a paragraph of its own, a blank line beneath it; a second blank
     // line sets off the history and each block of facts, no heading and no rule.
     return (
@@ -283,7 +281,7 @@ export const register: Register = on => {
               </Box>
               <Text>{u.value}</Text>
             </Box>
-            <Box marginLeft={NAME_CELLS} {...(isHover ? { display: 'none' as const, hover: { display: 'flex' as const } } : {})}>
+            <Box marginLeft={NAME_CELLS}>
               <Text color="subtle">{u.hint}</Text>
             </Box>
           </Box>

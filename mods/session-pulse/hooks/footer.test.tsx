@@ -48,13 +48,13 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
     expect((await pane.find({ type: 'Text', text: new RegExp(`^${name}$`) }))?.props.color).toBe('inactive')
     expect(await pane.find({ type: 'Text', text: value })).toBeTruthy()
   }
-  // Each has a hint, hidden on the desktop until the pointer is over its row.
+  // Each has a hint beneath it.
   expect(await pane.find({ type: 'Text', text: /84k of 200k tokens/ })).toBeTruthy()
   expect(await pane.find({ type: 'Text', text: /resets in 2h 10m/ })).toBeTruthy()
   expect(await pane.find({ type: 'Text', text: /API price/ })).toBeTruthy()
-  // (The test kit's view of a Box leaves out its hover, the reveal itself.)
-  // Eight rows: context, compact, memory; 5h, cost; errors, branch, changes.
-  expect((await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none')).toHaveLength(8)
+  // Every hint shows outright, in the faintest grey: nothing waits on a hover.
+  expect((await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none')).toHaveLength(0)
+  expect((await pane.find({ type: 'Text', text: /^84k of 200k tokens/ }))?.props.color).toBe('subtle')
   await pane.unmount()
   await footer.unmount()
 })
@@ -66,13 +66,4 @@ test('where no pane can be placed, pressing the footer shows the Pulse as a toas
   await $.ui.press({ plugin: PLUGIN, key: 'pulse-footer' })
   expect(seen.toasts.join('\n')).toContain('◂ your move · next: approve the PR')
   await footer.unmount()
-})
-
-test('the terminal, with no pointer to hover, shows the usage hints outright', async ($, on) => {
-  await boot($, on)
-  await reply($, '▸ working · next: write the parser')
-  const pane = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', requestId: 'session-pulse', component: 'Pane', props: { bodyColumns: 40 } as never })
-  expect(await pane.find({ type: 'Text', text: /84k of 200k tokens/ })).toBeTruthy()
-  expect((await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none')).toHaveLength(0)
-  await pane.unmount()
 })
