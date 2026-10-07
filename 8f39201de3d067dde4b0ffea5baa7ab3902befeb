@@ -1,0 +1,31 @@
+mods/session-pulse/hooks/footer.test.tsx
+  638774b95a471205 55-57
+
+mods/session-pulse/hooks/register.tsx
+  638774b95a471205 353-355,370,374-381
+
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "base_commit_sha": "7c40aa57d31b705ec3f4169384be1464e6303725",
+  "prompts": {
+    "638774b95a471205": {
+      "tool": "claude_code",
+      "id": "79ae11fb-26d8-4458-9009-80678f86b18f",
+      "model": "unknown",
+      "author": {
+        "human": "Yehuda Gilead <545253+vdz@users.noreply.github.com>"
+      },
+      "total_additions": 15,
+      "total_deletions": 9,
+      "sparkey": {
+        "attribution_precision": "commit"
+      }
+    }
+  },
+  "sparkey": {
+    "client_version": ""
+  }
+}
+Sparkey-Session-Id: 79ae11fb-26d8-4458-9009-80678f86b18f
+Sparkey-Contributor-Uuid: 25f5f227-833d-47fa-9e95-a7511bdf660d
