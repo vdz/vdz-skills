@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { footerLabel, parsePulseLine, pulseParts } from './pulse'
+import { footerLabel, parsePulseLine, pulseParts, timeLeft } from './pulse'
 
 test('a reply ending in a Pulse line yields its Move, Step and Next action', async () => {
   const reply = 'Tests are green.\n\n◂ your move · 3/5 · next: approve the PR'
@@ -45,4 +45,12 @@ test('a Pulse line splits into parts: the glyph and "next:" accented, the Move s
 test('the footer label is the Move and the Step only, short enough for any footer', async () => {
   expect(footerLabel({ move: 'your move', step: { n: 3, of: 5 }, next: 'approve the PR' })).toBe('◂ your move 3/5')
   expect(footerLabel({ move: 'working', next: 'a very long next action that would never fit' })).toBe('▸ working')
+})
+
+test('the time left to a reset reads in its two largest units', async () => {
+  const minute = 60_000
+  expect(timeLeft((2 * 60 + 10) * minute)).toBe('2h 10m')
+  expect(timeLeft((3 * 24 * 60 + 4 * 60 + 30) * minute)).toBe('3d 4h')
+  expect(timeLeft(12 * minute)).toBe('12m')
+  expect(timeLeft(-5 * minute)).toBe('now')
 })

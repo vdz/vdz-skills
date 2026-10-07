@@ -58,6 +58,16 @@ export function pulseParts(line: PulseLine): Part[] {
   return parts
 }
 
+// The time until a reset in its two largest units: "2h 10m", "3d 4h", "12m".
+export function timeLeft(ms: number): string {
+  const minutes = Math.round(ms / 60_000)
+  if (minutes <= 0) return 'now'
+  const [d, h, m] = [Math.floor(minutes / 1440), Math.floor((minutes % 1440) / 60), minutes % 60]
+  if (d > 0) return h > 0 ? `${d}d ${h}h` : `${d}d`
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`
+  return `${m}m`
+}
+
 // The reply with its Pulse line taken off the end, or null when it ends in none.
 export function splitPulseLine(reply: string): { body: string; line: string } | null {
   if (parsePulseLine(reply) === null) return null

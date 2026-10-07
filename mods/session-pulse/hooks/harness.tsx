@@ -12,13 +12,14 @@ export async function boot($: $, on: On, options: { sessionId?: string; entries?
   const session = { id: options.sessionId ?? 's1' }
   const seen = { toasts: [] as string[], panes: [] as string[] }
   mock.clock(on)
+  const resetsAt = new Date((2 * 60 + 10) * 60_000).toISOString() // the mock clock starts at 0
   mock.store(on, options.entries)
   on('session.id', () => ({ value: session.id }))
   on('session.usage', () => ({
     value: {
       startedAt: 0,
       context: { tokens: 84_000, window: 200_000, percent: 42 },
-      rateLimits: [{ kind: 'five_hour', percentUsed: 61 }],
+      rateLimits: [{ kind: 'five_hour', percentUsed: 61, resetsAt }],
       cost: { usd: 3.2 },
     },
   }))

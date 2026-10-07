@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { ElementConstructor, EngineInterface, Register, TextProps } from 'claude-code'
 
 import type { SessionPulse } from '../types'
-import { footerLabel, formatPulse, parsePulseLine, pulseParts, splitPulseLine } from './pulse'
+import { footerLabel, formatPulse, parsePulseLine, pulseParts, splitPulseLine, timeLeft } from './pulse'
 import type { Part, Tone } from './pulse'
 
 const COMMAND = 'pulse'
@@ -109,23 +109,35 @@ function Typeset(props: { Text: ElementConstructor<TextProps>; parts: Part[]; is
 const STALE_NOTE: Part = { text: ' (stale: the last reply carried no Pulse line)', tone: 'faint' }
 const LIMIT_NAMES: Record<string, string> = { five_hour: '5h', seven_day: '7d' }
 
-type Gauge = { name: string; percent: number }
+type Gauge = { name: string; percent: number; hint: string }
+
+const LIMIT_HINTS: Record<string, string> = { five_hour: 'of the 5-hour usage limit', seven_day: 'of the weekly usage limit' }
+const kilo = (tokens: number) => `${Math.round(tokens / 1000)}k`
 
 // The gauges: context fill and each rate-limit window, as the engine itself figures
-// them, and the session's cost (no price table of the mod's own).
-async function gauges($: EngineInterface): Promise<{ list: Gauge[]; cost?: string }> {
+// them, and the session's cost (no price table of the mod's own). Every figure is
+// used, never remaining; each hint says what it counts.
+async function gauges($: EngineInterface): Promise<{ list: Gauge[]; cost?: string; costHint: string }> {
   const usage = await $.session.usage()
+  const now = await $.clock.now()
+  const { context } = usage
   const list = [
-    ...(usage.context.percent === undefined ? [] : [{ name: 'context', percent: usage.context.percent }]),
-    ...usage.rateLimits.map(limit => ({ name: LIMIT_NAMES[limit.kind] ?? limit.kind, percent: limit.percentUsed })),
+    ...(context.percent === undefined
+      ? []
+      : [{ name: 'context', percent: context.percent, hint: `${kilo(context.tokens ?? 0)} of ${kilo(context.window)} tokens in the window` }]),
+    ...usage.rateLimits.map(limit => {
+      const reset = limit.resetsAt === undefined ? '' : ` · resets in ${timeLeft(Date.parse(limit.resetsAt) - now)}`
+      return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, percent: limit.percentUsed, hint: `${LIMIT_HINTS[limit.kind] ?? 'of this limit'}${reset}` }
+    }),
   ]
-  return { list, cost: usage.cost === undefined ? undefined : `$${usage.cost.usd.toFixed(2)}` }
+  const cost = usage.cost === undefined ? undefined : `$${usage.cost.usd.toFixed(2)}`
+  return { list, cost, costHint: 'this session at API prices, as /cost' }
 }
 
 // The gauges in one line of text, for /pulse and the toast.
 async function meters($: EngineInterface) {
   const { list, cost } = await gauges($)
-  return [...list.map(g => `${g.name} ${Math.round(g.percent)}%`), ...(cost === undefined ? [] : [cost])].join(' · ')
+  return [...list.map(g => `${g.name} ${Math.round(g.percent)}% used`), ...(cost === undefined ? [] : [cost])].join(' · ')
 }
 
 // A press is the person asking, so the pane seats at any width; where the surface
@@ -202,13 +214,19 @@ export const register: Register = on => {
     const { Box, Text } = $.ui.resolve(e)
     const current = await read($, pulse)
     const before = earlier(current, await read($, history))
-    const { list, cost } = await gauges($)
+    const { list, cost, costHint } = await gauges($)
     const set = (p: SessionPulse, isMuted?: boolean) => (
       <Typeset Text={Text} parts={[...pulseParts(p), ...(p.isStale ? [STALE_NOTE] : [])]} isMuted={isMuted} />
     )
-    // The usage as two columns: the name quiet, the value plain beside it.
+    // The usage as two columns, the name quiet and the value plain, each with a hint
+    // beneath: on the desktop hidden until the pointer is over its row, on the
+    // terminal, which has no pointer to hover, shown outright.
     const NAME_CELLS = 9
-    const usage = [...list.map(g => ({ name: g.name, value: `${Math.round(g.percent)}%` })), ...(cost === undefined ? [] : [{ name: 'cost', value: cost }])]
+    const usage = [
+      ...list.map(g => ({ name: g.name, value: `${Math.round(g.percent)}% used`, hint: g.hint })),
+      ...(cost === undefined ? [] : [{ name: 'cost', value: cost, hint: costHint }]),
+    ]
+    const isHover = e.surface === 'desktop'
     // Every Pulse is a paragraph of its own, a blank line beneath it; a second blank
     // line sets the history and the usage off, no heading and no rule.
     return (
@@ -220,11 +238,16 @@ export const register: Register = on => {
           </Box>
         ))}
         {usage.map((u, index) => (
-          <Box key={`u-${u.name}`} flexDirection="row" marginTop={index === 0 ? 1 : 0}>
-            <Box width={NAME_CELLS}>
-              <Text {...QUIET}>{u.name}</Text>
+          <Box key={`u-${u.name}`} flexDirection="column" marginTop={index === 0 ? 1 : 0}>
+            <Box flexDirection="row">
+              <Box width={NAME_CELLS}>
+                <Text {...QUIET}>{u.name}</Text>
+              </Box>
+              <Text>{u.value}</Text>
             </Box>
-            <Text>{u.value}</Text>
+            <Box marginLeft={NAME_CELLS} {...(isHover ? { display: 'none' as const, hover: { display: 'flex' as const } } : {})}>
+              <Text color="subtle">{u.hint}</Text>
+            </Box>
           </Box>
         ))}
       </Box>
