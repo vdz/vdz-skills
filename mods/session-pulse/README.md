@@ -15,15 +15,13 @@ Tests are green.
   `✓ done`, then `n/m`, then `next: …`. The rule replaces the CLAUDE.md "restate state
   every turn" line. The current Pulse rides along too, so `status?` costs no digging.
 - **Footer.** `◂ your move 3/5` sits ahead of the mode labels (and focus-read's
-  Toggle). Click it for the Pulse pane: the Pulse, the last five before it, then the
-  facts. Short at first (context used, the 5h and 7d limits, cost); the `▾` on its own
-  row at the pane's right edge shows three blocks, each fact with a faint hint beneath:
-  context used, room before auto-compact and memory loaded; the usage limits and cost;
-  failed tool calls (red once there is one), the branch and its uncommitted files. The
-  choice of short or full is remembered. Links: the limits open claude.ai's usage page,
-  the branch its pull request (or its tree), each memory and uncommitted file itself;
-  the last failure lists the last five. Nothing waits on a hover. Where no pane can be
-  placed, the same text comes up as a toast.
+  Toggle). Click it for the Pulse pane: the Pulse, the last five before it, then every
+  fact, one line each with a grey detail beside it: context used (and room before
+  auto-compact), memory loaded; the 5h and 7d limits, cost; failed tool calls (red once
+  there is one), the branch, the uncommitted files. Nothing folds and nothing waits on
+  a hover. Links: the limits open claude.ai's usage page, the branch its pull request
+  (or its tree), each memory and uncommitted file itself; the last failure lists the
+  last five. Where no pane can be placed, the same text comes up as a toast.
 - **`/pulse`** answers in place, with no model turn; `/pulse pane` opens the pane.
 - **Stale.** A reply that leaves work open with no Pulse line keeps the old Pulse,
   marked stale (dimmed in the footer). A done Pulse never goes stale.

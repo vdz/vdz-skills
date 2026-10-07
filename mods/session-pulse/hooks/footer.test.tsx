@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { action, boot, PLUGIN, reply } from './harness'
+import { boot, PLUGIN, reply } from './harness'
 
 const FOOTER = { component: 'SessionMode' as const, props: { modes: ['bypass permissions'] } }
 
@@ -43,35 +43,20 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   expect(await pane.find({ type: 'Text', text: '▸ working · 1/3 · next: write the parser' })).toBeTruthy()
   // No heading and no rule: space alone sets the history and the usage off.
   expect(await pane.find({ type: 'Text', text: /Earlier|─|━/ })).toBeUndefined()
-  // Short at first: context, the limits and cost, no hints and nothing else.
-  for (const [name, value] of [['context', '`42%` used'], ['cost', '`$3.20`']]) {
-    expect((await pane.find({ type: 'Text', text: new RegExp(`^${name}$`) }))?.props.color).toBe('inactive')
-    expect(await pane.find({ type: 'Markdown', text: value })).toBeTruthy()
-  }
-  // Each link names where it goes in its own title: the surface's native tooltip.
-  expect(await pane.find({ type: 'Markdown', text: '[`61%` used](https://claude.ai/settings/usage "Usage on claude.ai")' })).toBeTruthy()
-  for (const name of ['compact', 'memory', 'errors', 'branch', 'changes']) expect(await pane.find({ key: `u-${name}` })).toBeUndefined()
-  expect(await pane.find({ type: 'Text', text: /^84k of 200k$/ })).toBeUndefined()
-  // The icon at the pane's right edge shows the rest: padded on its left alone, wide
-  // enough to hit, the glyph flush right; no tip, as one would open over it and take the click.
-  expect((await pane.find({ key: 'pulse-more' }))?.props.text).toBe('[\u00a0\u00a0\u00a0\u00a0▾](https://pulse.invalid/fold "Show every fact")')
-  // The icon has a row of its own at the top of the facts, set to its end: the pane's right edge.
-  expect((await pane.findAll({ type: 'Box' })).some(b => b.props.justifyContent === 'flex-end' && b.text?.includes('▾'))).toBe(true)
-  // Nothing waits on a hover.
-  const hidden = async () => (await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none' || b.props.position === 'absolute')
-  expect(await hidden()).toHaveLength(0)
-  // A pointer on a placed Box is on its parent, so nothing pressable sits in one: only hidden tips are placed.
-  const placed = (await pane.findAll({ type: 'Box' })).filter(b => b.props.position === 'absolute')
-  expect(placed.every(b => b.props.display === 'none')).toBe(true)
-  // `more` shows the rest, each with its hint beneath in the faintest grey.
-  await pane.press({ key: 'pulse-more', link: action('fold') })
-  expect((await pane.find({ type: 'Text', text: /^84k of 200k$/ }))?.props.color).toBe('subtle')
-  expect(await pane.find({ type: 'Text', text: /^resets in 2h 10m$/ })).toBeTruthy()
-  expect(await pane.find({ type: 'Text', text: /^at API prices$/ })).toBeTruthy()
-  expect(await pane.find({ key: 'u-branch' })).toBeTruthy()
-  expect((await pane.find({ key: 'pulse-more' }))?.props.text).toBe('[\u00a0\u00a0\u00a0\u00a0▴](https://pulse.invalid/fold "Show the short form")')
-  expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/tree/feat/x "feat/x on GitHub")' })).toBeTruthy()
-  expect(await hidden()).toHaveLength(0)
+  // Every fact, one line each, the name quiet and the detail grey beside the value.
+  for (const name of ['context', 'memory', '5h', 'cost', 'errors', 'branch', 'changes']) expect(await pane.find({ key: `u-${name}` })).toBeTruthy()
+  expect((await pane.find({ type: 'Text', text: /^context$/ }))?.props.color).toBe('inactive')
+  expect(await pane.find({ type: 'Markdown', text: '`42%` used' })).toBeTruthy()
+  expect((await pane.find({ type: 'Text', text: /^84k of 200k · compacts in 76k$/ }))?.props.color).toBe('subtle')
+  expect(await pane.find({ type: 'Markdown', text: '[`61%` used](https://claude.ai/settings/usage)' })).toBeTruthy()
+  expect(await pane.find({ type: 'Text', text: /^resets 2h 10m$/ })).toBeTruthy()
+  expect(await pane.find({ type: 'Markdown', text: '`$3.20`' })).toBeTruthy()
+  expect(await pane.find({ type: 'Markdown', text: '[`feat/x`](https://github.com/vdz/skills/tree/feat/x)' })).toBeTruthy()
+  // Nothing folds, and nothing waits on a hover.
+  expect(await pane.find({ key: 'u-compact' })).toBeUndefined()
+  expect(await pane.find({ type: 'Markdown', text: /pulse\.invalid\/fold|▾|▴/ })).toBeUndefined()
+  const hidden = (await pane.findAll({ type: 'Box' })).filter(b => b.props.display === 'none' || b.props.position === 'absolute')
+  expect(hidden).toHaveLength(0)
   await pane.unmount()
   await footer.unmount()
 })

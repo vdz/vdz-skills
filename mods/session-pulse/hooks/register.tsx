@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { ElementConstructor, EngineInterface, MarkdownProps, Register, TextProps } from 'claude-code'
+import type { ElementConstructor, EngineInterface, Register, TextProps } from 'claude-code'
 
 import type { SessionPulse, SessionPulseErrors } from '../types'
 import { codeNumbers, fileLink, footerLabel, formatPulse, parseGitStatus, webUrl, parsePulseLine, pulseParts, splitPulseLine, timeLeft, tokens } from './pulse'
@@ -25,9 +25,6 @@ const RULE = [
 const pulse = atom({ plugin: 'session-pulse', key: 'pulse' } as const, null as SessionPulse | null)
 const history = atom({ plugin: 'session-pulse', key: 'history' } as const, [] as SessionPulse[])
 const errors = atom({ plugin: 'session-pulse', key: 'errors' } as const, { count: 0 } as SessionPulseErrors)
-const isExpanded = atom({ plugin: 'session-pulse', key: 'isExpanded' } as const, false)
-// The person's choice of short or full, kept for every session, not per session.
-const PANE_KEY = 'pane'
 
 // `errors` is absent from what an earlier version saved.
 type Saved = { pulse: SessionPulse | null; history: SessionPulse[]; errors?: SessionPulseErrors }
@@ -121,55 +118,28 @@ const ERRORS_LISTED = 5
 const FILES_LISTED = 5
 // How long an answer from GitHub about the branch's pull request holds.
 const PR_FRESH_MS = 5 * 60_000
-// What the pane shows before `more`: the context and what the session spends.
-const SHORT = new Set(['context', '5h', '7d', 'cost'])
 
-// One row of the pane's facts: a name, its value, and a hint saying what it counts.
-// `href` makes the value a link; a hint with `isHintMarkdown` carries links of its own.
-// `href` makes the value a link, `title` its title. `onHintPress` makes the hint a
-// control, `tip` its title.
+// One line of the pane's facts: a name, its value, and a detail in grey beside it.
+// `href` makes the value a link. A detail with `isDetailMarkdown` carries links of its
+// own; `onDetailPress` makes the whole detail one control.
 type Fact = {
   name: string
   value: string
-  hint: string
-  tip?: string
+  detail?: string
   isCode?: boolean
   href?: string
-  title?: string
   isAlarm?: boolean
-  isHintMarkdown?: boolean
-  onHintPress?: () => Promise<void>
+  isDetailMarkdown?: boolean
+  onDetailPress?: () => Promise<void>
 }
 
-// A markdown link with a title (the desktop shows none; a terminal or browser may).
-const link = (text: string, href: string, title: string) => `[${text}](${href} "${title.replaceAll('"', "'")}")`
+const link = (text: string, href: string) => `[${text}](${href})`
 
-// A control: a link the mod answers itself, so the surface opens nothing. A Button
-// would do, but in the desktop pane only a link has been seen to take the press.
-// Its href goes nowhere (`.invalid` never resolves) in case a surface opens it anyway.
+// A control: a link the mod answers itself, so the surface opens nothing (in the
+// desktop pane only a link has been seen to take a press). Its href goes nowhere
+// (`.invalid` never resolves) in case a surface opens it anyway.
 const actionHref = (id: string) => `https://pulse.invalid/${id}`
 const escapeLabel = (label: string) => label.replace(/[[\]\\]/g, char => `\\${char}`)
-function Action(props: {
-  Markdown: ElementConstructor<MarkdownProps>
-  id: string
-  name: string
-  label: string
-  title: string
-  isDim?: boolean
-  onPress: () => Promise<void>
-}) {
-  const { Markdown, id, name, label, title, isDim = false, onPress } = props
-  const href = actionHref(id)
-  return (
-    <Markdown
-      key={name}
-      text={link(escapeLabel(label), href, title)}
-      dimColor={isDim}
-      pressableLinks={[href]}
-      onLinkPress={() => void onPress()}
-    />
-  )
-}
 
 // A memory file by its last two path segments: `.claude/CLAUDE.md`.
 const tail = (path: string) => path.split('/').slice(-2).join('/')
@@ -218,7 +188,7 @@ async function branchUrl($: EngineInterface, upstream: string | undefined): Prom
 
 // The pane's facts in three blocks: the context window, the usage limits and cost,
 // and the work itself. Usage figures are all used, never remaining, as the engine
-// figures them (no price table of the mod's own); each hint says what it counts.
+// figures them (no price table of the mod's own).
 async function facts($: EngineInterface): Promise<Fact[][]> {
   const usage = await $.session.usage({ breakdown: 'summary' })
   const now = await $.clock.now()
@@ -226,60 +196,49 @@ async function facts($: EngineInterface): Promise<Fact[][]> {
   const breakdown = context.breakdown
   const window: Fact[] = []
   if (context.percent !== undefined) {
-    const hint = `${tokens(context.tokens ?? 0)} of ${tokens(context.window)}`
-    window.push({ name: 'context', value: `${Math.round(context.percent)}% used`, hint })
+    const used = context.tokens ?? 0
+    const threshold = breakdown?.isAutoCompactEnabled === true ? breakdown.autoCompactThreshold : undefined
+    const compact =
+      breakdown === undefined ? []
+      : threshold === undefined ? ['auto-compact off']
+      : [threshold > used ? `compacts in ${tokens(threshold - used)}` : 'compact due']
+    window.push({ name: 'context', value: `${Math.round(context.percent)}% used`, detail: [`${tokens(used)} of ${tokens(context.window)}`, ...compact].join(' · ') })
   }
-  if (breakdown !== undefined) {
-    const threshold = breakdown.isAutoCompactEnabled ? breakdown.autoCompactThreshold : undefined
-    if (threshold === undefined) window.push({ name: 'compact', value: 'off', hint: 'auto-compact is off' })
-    else {
-      const room = threshold - (context.tokens ?? 0)
-      window.push({ name: 'compact', value: room > 0 ? `in ${tokens(room)}` : 'due', hint: `at ${tokens(threshold)}` })
-    }
-    const files = breakdown.memoryFiles
-    if (files.length > 0) {
-      const total = files.reduce((sum, file) => sum + file.tokens, 0)
-      const value = `${tokens(total)} · ${files.length} file${files.length === 1 ? '' : 's'}`
-      const hint = files.map(file => `${link(tail(file.path), fileLink(file.path), file.path)} ${tokens(file.tokens)}`).join(' · ')
-      window.push({ name: 'memory', value, hint, isHintMarkdown: true })
-    }
+  const files = breakdown?.memoryFiles ?? []
+  if (files.length > 0) {
+    const total = files.reduce((sum, file) => sum + file.tokens, 0)
+    const detail = files.map(file => `${link(tail(file.path), fileLink(file.path))} ${tokens(file.tokens)}`).join(' · ')
+    window.push({ name: 'memory', value: tokens(total), detail, isDetailMarkdown: true })
   }
-  const limits: Fact[] = usage.rateLimits.map(limit => {
-    const hint = limit.resetsAt === undefined ? '' : `resets in ${timeLeft(Date.parse(limit.resetsAt) - now)}`
-    return { name: LIMIT_NAMES[limit.kind] ?? limit.kind, value: `${Math.round(limit.percentUsed)}% used`, hint, href: USAGE_PAGE, title: 'Usage on claude.ai' }
-  })
-  if (usage.cost !== undefined) limits.push({ name: 'cost', value: `$${usage.cost.usd.toFixed(2)}`, hint: 'at API prices' })
+  const limits: Fact[] = usage.rateLimits.map(limit => ({
+    name: LIMIT_NAMES[limit.kind] ?? limit.kind,
+    value: `${Math.round(limit.percentUsed)}% used`,
+    href: USAGE_PAGE,
+    ...(limit.resetsAt === undefined ? {} : { detail: `resets ${timeLeft(Date.parse(limit.resetsAt) - now)}` }),
+  }))
+  if (usage.cost !== undefined) limits.push({ name: 'cost', value: `$${usage.cost.usd.toFixed(2)}` })
   const failed = await read($, errors)
   const work: Fact[] = [
-    {
-      name: 'errors',
-      value: String(failed.count),
-      hint: failed.last === undefined ? 'failed tool calls' : `last: ${failed.last}`,
-      isAlarm: failed.count > 0,
-      ...(failed.count > 0
-        ? { onHintPress: () => listErrors($), tip: `Show the last ${Math.min(failed.count, ERRORS_LISTED)} failed calls` }
-        : {}),
-    },
+    failed.last === undefined
+      ? { name: 'errors', value: String(failed.count) }
+      : { name: 'errors', value: String(failed.count), isAlarm: true, detail: `last: ${failed.last}`, onDetailPress: () => listErrors($) },
   ]
   const status = await gitStatus($)
   if (status !== null) {
     const away = [status.ahead > 0 ? `${status.ahead} ahead` : '', status.behind > 0 ? `${status.behind} behind` : ''].filter(Boolean).join(', ')
     const pr = status.upstream === undefined ? null : await pullRequest($, status.branch)
     const href = pr?.url ?? (await branchUrl($, status.upstream))
-    const where = status.upstream === undefined ? 'not pushed' : away === '' ? 'level with upstream' : away
-    const hint = pr === null ? where : `PR #${pr.number} · ${where}`
-    const title = pr === null ? `${status.branch} on GitHub` : `PR #${pr.number} on GitHub`
-    work.push({ name: 'branch', value: status.branch, isCode: true, hint, ...(href === undefined ? {} : { href, title }) })
+    const where = status.upstream === undefined ? 'not pushed' : away === '' ? 'in sync' : away
+    const detail = pr === null ? where : `PR #${pr.number} · ${where}`
+    work.push({ name: 'branch', value: status.branch, isCode: true, detail, ...(href === undefined ? {} : { href }) })
     const count = status.files.length
-    const root = ((await git($, 'rev-parse', '--show-toplevel')) ?? '').trim()
-    const named = status.files.slice(0, FILES_LISTED).map(file => (root === '' ? tail(file) : link(tail(file), fileLink(`${root}/${file}`), `${root}/${file}`)))
-    const files = [...named, ...(count > FILES_LISTED ? [`+${count - FILES_LISTED} more`] : [])].join(' · ')
-    work.push({
-      name: 'changes',
-      value: `${count} file${count === 1 ? '' : 's'}`,
-      hint: count === 0 ? 'uncommitted' : `uncommitted: ${files}`,
-      isHintMarkdown: true,
-    })
+    if (count === 0) work.push({ name: 'changes', value: 'none' })
+    else {
+      const root = ((await git($, 'rev-parse', '--show-toplevel')) ?? '').trim()
+      const named = status.files.slice(0, FILES_LISTED).map(file => (root === '' ? tail(file) : link(tail(file), fileLink(`${root}/${file}`))))
+      const detail = [...named, ...(count > FILES_LISTED ? [`+${count - FILES_LISTED} more`] : [])].join(' · ')
+      work.push({ name: 'changes', value: `${count} file${count === 1 ? '' : 's'}`, detail, isDetailMarkdown: true })
+    }
   }
   return [window, limits, work].filter(block => block.length > 0)
 }
@@ -310,8 +269,6 @@ export const register: Register = on => {
       await $.command.register({ name: COMMAND, description: "Where this session stands: whose move, which step, what's next.", argumentHint: '[pane]' })
     } catch {}
     await sync($)
-    const prefs = (await $.store.get(PANE_KEY)) as { isExpanded?: boolean } | undefined
-    await update($, isExpanded, () => prefs?.isExpanded === true)
     return next(e)
   })
 
@@ -369,56 +326,35 @@ export const register: Register = on => {
     )
   })
 
+  // The pane: the Pulse, the ones before it, then every fact, one line each. Nothing
+  // folds and nothing waits on a hover; the one control is the last error.
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     await sync($)
     const { Box, Markdown, Text } = $.ui.resolve(e)
     const current = await read($, pulse)
     const before = earlier(current, await read($, history))
-    const isFull = await read($, isExpanded)
-    const all = await facts($)
-    // Short: the context and what the session spends, one block, no hints.
-    const blocks = isFull ? all : [all.flat().filter(f => SHORT.has(f.name)).map(f => ({ ...f, hint: '' }))]
+    const blocks = await facts($)
     const set = (p: SessionPulse, isMuted?: boolean) => (
       <Typeset Text={Text} parts={[...pulseParts(p), ...(p.isStale ? [STALE_NOTE] : [])]} isMuted={isMuted} />
     )
     const value = (u: Fact) => {
       if (u.isAlarm === true) return <Text color="error">{u.value}</Text>
       const text = u.isCode ? `\`${u.value}\`` : codeNumbers(u.value)
-      return <Markdown text={u.href === undefined ? text : link(text, u.href, u.title ?? u.href)} />
+      return <Markdown text={u.href === undefined ? text : link(text, u.href)} />
     }
-    const hint = (u: Fact) =>
-      u.onHintPress !== undefined ? (
-        <Action Markdown={Markdown} id={u.name} name={`pulse-${u.name}`} label={u.hint} title={u.tip ?? u.hint} isDim onPress={u.onHintPress} />
-      )
-      : u.isHintMarkdown === true ? <Markdown text={u.hint} dimColor />
-      : <Text color="subtle">{u.hint}</Text>
-    const toggle = async () => {
-      const isNow = !(await read($, isExpanded))
-      await update($, isExpanded, () => isNow)
-      await $.store.set(PANE_KEY, { isExpanded: isNow })
+    const detail = (u: Fact, text: string) => {
+      if (u.onDetailPress !== undefined) {
+        const href = actionHref(u.name)
+        const press = u.onDetailPress
+        return <Markdown key={`pulse-${u.name}`} text={link(escapeLabel(text), href)} dimColor pressableLinks={[href]} onLinkPress={() => void press()} />
+      }
+      return u.isDetailMarkdown === true ? <Markdown text={text} dimColor /> : <Text color="subtle">{text}</Text>
     }
-    // The icon that folds the facts, in the flow at the end of their first row: a
-    // pointer on a placed Box is on its parent, so a control in one is never pressed.
-    // Padded on its left with no-break spaces to a target worth aiming at. It has a
-    // row of its own at the top of the facts, set to its end: the one way the desktop
-    // puts it at the pane's right edge (it grows no spacer and keeps no row's width).
-    const PAD = '\u00a0\u00a0\u00a0\u00a0'
-    const foldTitle = isFull ? 'Show the short form' : 'Show every fact'
-    const fold = (
-      <Action
-        Markdown={Markdown}
-        id="fold"
-        name="pulse-more"
-        label={`${PAD}${isFull ? '▴' : '▾'}`}
-        title={foldTitle}
-        onPress={toggle}
-      />
-    )
-    // The facts as two columns, the name quiet and the value plain, each with its hint
-    // beneath in the faintest grey (no element sets a smaller size).
+    // Two columns, the name quiet; the value, then its detail, which wraps in its own
+    // column when the pane is narrow.
     const NAME_CELLS = 9
-    // Every Pulse is a paragraph of its own, a blank line beneath it; a second blank
-    // line sets off the history and each block of facts, no heading and no rule.
+    // Every Pulse is a paragraph of its own; a blank line sets off the history and each
+    // block of facts, no heading and no rule.
     return (
       <Box flexDirection="column" paddingX={1}>
         <Box marginBottom={1}>{current === null ? <Text {...QUIET}>No Pulse yet.</Text> : set(current)}</Box>
@@ -427,22 +363,23 @@ export const register: Register = on => {
             {set(p, true)}
           </Box>
         ))}
-        <Box flexDirection="column" marginTop={1}>
-          <Box flexDirection="row" justifyContent="flex-end">
-            {fold}
-          </Box>
-          {blocks.flatMap((block, at) => block.map((u, index) => (
-            <Box key={`u-${u.name}`} flexDirection="column" marginTop={index === 0 && at > 0 ? 1 : 0}>
-              <Box flexDirection="row">
-                <Box width={NAME_CELLS}>
+        {blocks.map((block, at) => (
+          <Box key={`b${at}`} flexDirection="column" marginTop={1}>
+            {block.map(u => (
+              <Box key={`u-${u.name}`} flexDirection="row">
+                <Box width={NAME_CELLS} flexShrink={0}>
                   <Text {...QUIET}>{u.name}</Text>
                 </Box>
-                {value(u)}
+                <Box flexShrink={0}>{value(u)}</Box>
+                {u.detail === undefined ? null : (
+                  <Box marginLeft={2} flexShrink={1}>
+                    {detail(u, u.detail)}
+                  </Box>
+                )}
               </Box>
-              {u.hint === '' ? null : <Box marginLeft={NAME_CELLS}>{hint(u)}</Box>}
-            </Box>
-          )))}
-        </Box>
+            ))}
+          </Box>
+        ))}
       </Box>
     )
   })
