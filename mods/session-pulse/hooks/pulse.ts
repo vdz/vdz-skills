@@ -58,19 +58,6 @@ export function pulseParts(line: PulseLine): Part[] {
   return parts
 }
 
-// A gauge's bar: how many of its cells a percentage fills. Anything above zero
-// shows at least one cell, so a barely used limit still reads as used.
-export function gaugeCells(percent: number, width: number): { filled: number; empty: number } {
-  const share = Math.min(Math.max(percent, 0), 100) / 100
-  const filled = percent > 0 ? Math.max(1, Math.round(share * width)) : 0
-  return { filled, empty: width - filled }
-}
-
-// The theme colour a gauge fills with: calm while there is room, warmer as it runs out.
-export function gaugeColor(percent: number): 'success' | 'warning' | 'error' {
-  return percent >= 85 ? 'error' : percent >= 60 ? 'warning' : 'success'
-}
-
 // The reply with its Pulse line taken off the end, or null when it ends in none.
 export function splitPulseLine(reply: string): { body: string; line: string } | null {
   if (parsePulseLine(reply) === null) return null

@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { ElementConstructor, EngineInterface, Register, TextProps } from 'claude-code'
 
 import type { SessionPulse } from '../types'
-import { footerLabel, formatPulse, gaugeCells, gaugeColor, parsePulseLine, pulseParts, splitPulseLine } from './pulse'
+import { footerLabel, formatPulse, parsePulseLine, pulseParts, splitPulseLine } from './pulse'
 import type { Part, Tone } from './pulse'
 
 const COMMAND = 'pulse'
@@ -203,56 +203,30 @@ export const register: Register = on => {
     const current = await read($, pulse)
     const before = earlier(current, await read($, history))
     const { list, cost } = await gauges($)
-    const across = Math.max((e.props.bodyColumns ?? 40) - 2, 10)
-    const rule = (
-      <Box marginBottom={1}>
-        <Text color="subtle" wrap="truncate-end">
-          {'─'.repeat(across)}
-        </Text>
-      </Box>
-    )
     const set = (p: SessionPulse, isMuted?: boolean) => (
       <Typeset Text={Text} parts={[...pulseParts(p), ...(p.isStale ? [STALE_NOTE] : [])]} isMuted={isMuted} />
     )
+    // The usage as two columns: the name quiet, the value plain beside it.
     const NAME_CELLS = 9
-    const VALUE_CELLS = 5
-    const cells = Math.max(Math.min(across - NAME_CELLS - VALUE_CELLS, 20), 6)
-    const gauge = (g: Gauge) => {
-      const { filled, empty } = gaugeCells(g.percent, cells)
-      return (
-        <Box key={`g-${g.name}`} flexDirection="row">
-          <Box width={NAME_CELLS}>
-            <Text {...QUIET}>{g.name}</Text>
-          </Box>
-          <Text>
-            {filled > 0 ? <Text color={gaugeColor(g.percent)}>{'━'.repeat(filled)}</Text> : null}
-            {empty > 0 ? <Text color="subtle">{'━'.repeat(empty)}</Text> : null}
-          </Text>
-          <Text>{` ${Math.round(g.percent)}%`}</Text>
-        </Box>
-      )
-    }
-    // Every Pulse is a paragraph of its own, a blank line beneath it; rules set the
-    // history and the gauges off.
+    const usage = [...list.map(g => ({ name: g.name, value: `${Math.round(g.percent)}%` })), ...(cost === undefined ? [] : [{ name: 'cost', value: cost }])]
+    // Every Pulse is a paragraph of its own, a blank line beneath it; a second blank
+    // line sets the history and the usage off, no heading and no rule.
     return (
       <Box flexDirection="column" paddingX={1}>
         <Box marginBottom={1}>{current === null ? <Text {...QUIET}>No Pulse yet.</Text> : set(current)}</Box>
-        {before.length === 0 ? null : rule}
         {before.map((p, index) => (
-          <Box key={`h${index}`} marginBottom={1}>
+          <Box key={`h${index}`} marginBottom={1} marginTop={index === 0 ? 1 : 0}>
             {set(p, true)}
           </Box>
         ))}
-        {list.length === 0 && cost === undefined ? null : rule}
-        {list.map(gauge)}
-        {cost === undefined ? null : (
-          <Box flexDirection="row">
+        {usage.map((u, index) => (
+          <Box key={`u-${u.name}`} flexDirection="row" marginTop={index === 0 ? 1 : 0}>
             <Box width={NAME_CELLS}>
-              <Text {...QUIET}>cost</Text>
+              <Text {...QUIET}>{u.name}</Text>
             </Box>
-            <Text>{cost}</Text>
+            <Text>{u.value}</Text>
           </Box>
-        )}
+        ))}
       </Box>
     )
   })

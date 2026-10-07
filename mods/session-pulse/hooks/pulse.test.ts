@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { footerLabel, gaugeCells, gaugeColor, parsePulseLine, pulseParts } from './pulse'
+import { footerLabel, parsePulseLine, pulseParts } from './pulse'
 
 test('a reply ending in a Pulse line yields its Move, Step and Next action', async () => {
   const reply = 'Tests are green.\n\n◂ your move · 3/5 · next: approve the PR'
@@ -40,14 +40,6 @@ test('a Pulse line splits into parts: the glyph and "next:" accented, the Move s
     { text: '✓ ', tone: 'accent' },
     { text: 'done', tone: 'strong' },
   ])
-})
-
-test('a gauge bar fills its share of the cells and warms as it fills', async () => {
-  expect(gaugeCells(42, 10)).toEqual({ filled: 4, empty: 6 })
-  expect(gaugeCells(0, 10)).toEqual({ filled: 0, empty: 10 })
-  expect(gaugeCells(3, 10)).toEqual({ filled: 1, empty: 9 })
-  expect(gaugeCells(130, 10)).toEqual({ filled: 10, empty: 0 })
-  expect([gaugeColor(42), gaugeColor(61), gaugeColor(90)]).toEqual(['success', 'warning', 'error'])
 })
 
 test('the footer label is the Move and the Step only, short enough for any footer', async () => {

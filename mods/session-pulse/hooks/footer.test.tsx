@@ -41,20 +41,13 @@ test('pressing the footer opens the Pulse pane with the history and the meters',
   const pane = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', requestId: 'session-pulse', component: 'Pane', props: { bodyColumns: 40 } as never })
   expect(await pane.find({ type: 'Text', text: '◂ your move · 3/3 · next: approve the PR' })).toBeTruthy()
   expect(await pane.find({ type: 'Text', text: '▸ working · 1/3 · next: write the parser' })).toBeTruthy()
-  // A rule, not an "Earlier" heading, sets the history off; another sets off the gauges.
-  expect(await pane.find({ type: 'Text', text: /Earlier/ })).toBeUndefined()
-  expect(await pane.findAll({ type: 'Text', text: /^─{10,}$/ })).toHaveLength(2)
-  // Each gauge a bar: its filled cells coloured by how full it is, its value beside.
-  expect(await pane.find({ type: 'Text', text: /^context/ })).toBeTruthy()
-  const bars = await pane.findAll({ type: 'Text', text: /^━+$/ })
-  const fills = bars.filter(b => b.props.color !== undefined && b.props.color !== 'subtle').map(b => [b.text?.length, b.props.color])
-  expect(fills).toEqual([[8, 'success'], [12, 'warning']])
-  expect(await pane.find({ type: 'Text', text: /42%/ })).toBeTruthy()
-  expect(await pane.find({ type: 'Text', text: /61%/ })).toBeTruthy()
-  expect(await pane.find({ type: 'Text', text: /\$3\.20/ })).toBeTruthy()
-  // Each is a paragraph of its own: the Pulse, every Earlier entry, and the two rules.
-  const spaced = (await pane.findAll({ type: 'Box' })).filter(b => b.props.marginBottom === 1)
-  expect(spaced).toHaveLength(4)
+  // No heading and no rule: space alone sets the history and the usage off.
+  expect(await pane.find({ type: 'Text', text: /Earlier|─|━/ })).toBeUndefined()
+  // The usage as two columns: the name quiet, the value plain beside it.
+  for (const [name, value] of [['context', '42%'], ['5h', '61%'], ['cost', '$3.20']]) {
+    expect((await pane.find({ type: 'Text', text: new RegExp(`^${name}$`) }))?.props.color).toBe('inactive')
+    expect(await pane.find({ type: 'Text', text: value })).toBeTruthy()
+  }
   await pane.unmount()
   await footer.unmount()
 })
