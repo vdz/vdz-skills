@@ -73,7 +73,8 @@ Pinned Styles (Typewriter, Solo):
 - `j` / `↓` and `k` / `↑` move the pin, across replies at the edges. The window does
   not follow: the desktop refuses a mod's transcript scroll ("transcript not
   scrollable here").
-- `x`, or clicking the pinned paragraph again, releases it.
+- `x` releases it, and so does a click on the pinned paragraph's margin. A click on its
+  text lands on the text itself, so you can drag-select it.
 - Keys reach the mod only after a click inside a reply. `Esc` never reaches it, so it
   can't release.
 
@@ -84,7 +85,9 @@ Hidden paragraphs keep their space, so nothing jumps.
 - Focus unit is the paragraph: blank-line blocks, with fences, lists, tables and
   blockquotes kept whole and a heading glued to the block after it.
 - With hover, the pointer must rest for the Style's delay (150 ms Calm, 250 ms
-  Spotlight), so skimming focuses nothing; leaving clears at once.
+  Spotlight), so skimming focuses nothing. Leaving keeps the focus until the pointer
+  rests on another paragraph (the focused text sits over its sensor, so the sensor
+  can't tell leaving from moving onto the text).
 - Dim zero is the engine's dim (60% opacity, the terminal's dim colour) plus, on desktop, a
   light veil (alpha 0.42), leaving text near 35%.
 - Deep dim uses a heavier veil (alpha 0.8) in the transcript's own background colour
@@ -143,5 +146,6 @@ rsync -a --delete --exclude .claude-plugin ~/Dev/vdz-skills/mods/focus-read/ ~/.
   the cost of selection, links and inline formatting. Separate spike.
 - Typewriter scrolling (the pin held mid-window): the desktop refuses mod scrolls of the
   transcript.
-- Text selection inside a reply: the sensor overlay holds the pointer after a press, so
-  drag-selecting a paragraph's text is blocked while the mod is on (`/focus` to turn off).
+- Text selection outside the focus: the focused paragraph's text sits over its sensor,
+  so a drag selects it; every other paragraph stays under its sensor, so a drag can't
+  start in a dimmed paragraph or extend into one (`/focus` to turn off).

@@ -25,12 +25,16 @@ test('hovering brings one paragraph forward and sends the rest to deep dim', asy
     expect(await dimsOf(ui)).toEqual([true, false, true])
     // The veils are the desktop's two steps; the terminal has one dim only.
     // The bright paragraph gets a soft veil there too, easing full contrast a little.
-    const [zero, deep, soft] = surface === 'desktop' ? ['zero', 'deep', 'soft'] : ['none', 'none', 'none']
+    const [deep, soft] = surface === 'desktop' ? ['deep', 'soft'] : ['none', 'none']
     expect(await veilsOf(ui)).toEqual([deep, soft, deep])
+    // Leaving holds the focus: once its text is on top, the sensor beneath sees every
+    // pointer over the text as a leave. The next paragraph entered takes it.
     await ui.pointer({ type: 'leave', x: 0, y: 0, in: 'p1' })
     await ui.advance(200)
-    expect(await dimsOf(ui)).toEqual([true, true, true])
-    expect(await veilsOf(ui)).toEqual([zero, zero, zero])
+    expect(await dimsOf(ui)).toEqual([true, false, true])
+    await ui.pointer({ type: 'enter', x: 0, y: 0, in: 'p2' })
+    await ui.advance(200)
+    expect(await dimsOf(ui)).toEqual([true, true, false])
     await ui.unmount()
   }
 })
@@ -136,4 +140,27 @@ test('the footer button toggles the mode and every reply follows', async ($, on)
   expect(await reply.findAll({ type: 'Client' })).toHaveLength(3)
   await footer.unmount()
   await reply.unmount()
+})
+
+// A paragraph's children as drawn: which comes last paints on top.
+const layers = async (ui: { find: (q: { key: string }) => Promise<{ children: unknown[] } | undefined> }, key: string) =>
+  ((await ui.find({ key }))?.children ?? [])
+    .filter((c): c is { type: string; props: Record<string, unknown> } => typeof c === 'object' && c !== null)
+    .map(c => (c.props.position === 'absolute' ? 'sensor' : 'text'))
+
+test('the focused paragraph draws its text over its sensor, so a drag selects it; the rest keep the sensor on top', async ($, on) => {
+  await boot($, on)
+  const ui = await $.ui.mount({ plugin: 'focus-read', surface: 'desktop', requestId: 's', ...REPLY })
+  expect(await layers(ui, 's:1')).toEqual(['text', 'sensor'])
+  await ui.pointer({ type: 'enter', x: 0, y: 0, in: 'p1' })
+  await ui.advance(200)
+  expect(await layers(ui, 's:1')).toEqual(['sensor', 'text'])
+  // On top of a placed sensor only a positioned text paints.
+  const text = (await ui.find({ key: 's:1' }))?.children.at(-1) as { props: Record<string, unknown> }
+  expect(text.props.position).toBe('relative')
+  expect(await layers(ui, 's:0')).toEqual(['text', 'sensor'])
+  expect(await layers(ui, 's:2')).toEqual(['text', 'sensor'])
+  // The same sensor instance moves beneath: its key is kept.
+  expect((await ui.findAll({ type: 'Client' })).map(c => c.key)).toEqual(['p0', 'p1', 'p2'])
+  await ui.unmount()
 })

@@ -133,9 +133,9 @@ test('Typewriter: a Highlight on the pin, its neighbours at rest, deep dim in it
 })
 
 test('Typewriter pads every paragraph alike so the Highlight has room and pinning moves no text', async ($, on) => {
-  const padsOf = async (ui: { findAll: (q: { type: string }) => Promise<{ props: Record<string, unknown> }[]> }) =>
+  const padsOf = async (ui: { findAll: (q: { type: string }) => Promise<{ key?: string; props: Record<string, unknown> }[]> }) =>
     (await ui.findAll({ type: 'Box' }))
-      .filter(b => b.props.position === 'relative')
+      .filter(b => b.key?.includes(':'))
       .map(b => [b.props.paddingX ?? 0, b.props.paddingY ?? 0])
   await boot($, on, { style: 'typewriter' })
   const page = await $.ui.mount({ plugin: 'focus-read', surface: 'desktop', requestId: 'w', ...REPLY3 })

@@ -143,8 +143,10 @@ export const register: Register = on => {
     const isHere = (f: FocusReadFocus | null) => f !== null && f.requestId === here.requestId && f.index === here.index
     const trigger = STYLES[await read($, style)].trigger
     if (trigger === 'hover') {
+      // A leave never clears the focus: the focused paragraph's text sits over its
+      // sensor (so a drag selects it), and the sensor reads a pointer on the text as
+      // gone. The next paragraph entered takes the focus instead.
       if (data.kind === 'enter') await update($, focus, () => here)
-      else if (data.kind === 'leave') await update($, focus, current => (isHere(current) ? null : current))
     } else if (data.kind === 'pin') {
       await update($, focus, current => (isHere(current) ? null : here))
     } else if (data.kind === 'key' && typeof data.key === 'string') {
@@ -193,6 +195,17 @@ export const register: Register = on => {
               : state === 'deep' ? (look.deep === 'hidden' ? 'hidden' : 'deep') : 'zero'
           const sensor: SensorProps = { index, veil, restDelayMs: look.restDelayMs }
           const isPadded = hasVeil && look.highlight
+          const sensorLayer = (
+            <Box key="sensor" position="absolute" top={0} bottom={0} left={0} right={0}>
+              <Client key={`p${index}`} module="./paragraph.tsx" props={sensor} width="100%" height="100%" />
+            </Box>
+          )
+          // The sensor is a frame laid over the paragraph, and a drag that starts in a
+          // frame selects no text. So the focused paragraph, the one being read, draws
+          // its sensor first and its text after it: positioned, the text paints on top,
+          // selects, and its lit veil tints the ground behind it instead. Both keyed, so
+          // the surface moves the text and keeps the frame (and its keys) as it was.
+          const isOnTop = state === 'focused' && hasVeil
           return (
             <Box
               key={paragraphKey({ requestId: e.requestId, index })}
@@ -201,10 +214,11 @@ export const register: Register = on => {
               position="relative"
               marginBottom={index === paragraphs.length - 1 ? 0 : 1}
             >
-              <Markdown text={text} dimColor={isDim} />
-              <Box position="absolute" top={0} bottom={0} left={0} right={0}>
-                <Client key={`p${index}`} module="./paragraph.tsx" props={sensor} width="100%" height="100%" />
+              {isOnTop ? sensorLayer : null}
+              <Box key="text" position="relative" flexDirection="column">
+                <Markdown text={text} dimColor={isDim} />
               </Box>
+              {isOnTop ? null : sensorLayer}
             </Box>
           )
         })}
