@@ -2,7 +2,7 @@
 
 A Claude Code mod that keeps one session's "where are we" in view, so you never have to
 type `status?` and Claude never has to remember to restate it. Terms are in the repo's
-`CONTEXT.md` under "session-pulse mod".
+`GLOSSARY.md` under "session-pulse mod".
 
 ```
 Tests are green.

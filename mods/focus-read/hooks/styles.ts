@@ -1,5 +1,5 @@
 // A Style is a preset over the properties below; Mode says whether the mod acts,
-// the Style says how. See CONTEXT.md for each term.
+// the Style says how. See GLOSSARY.md for each term.
 
 export type StyleName = 'calm' | 'spotlight' | 'typewriter' | 'solo'
 
