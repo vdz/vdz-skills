@@ -1,0 +1,28 @@
+docs/pocock-workflow-policy.md
+  638774b95a471205 1,3,9-10,25-27,32,42,74-75,80
+
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "base_commit_sha": "6bf9020bb23872aaf4f72db5cd3ffc7c64b31f7e",
+  "prompts": {
+    "638774b95a471205": {
+      "tool": "claude_code",
+      "id": "79ae11fb-26d8-4458-9009-80678f86b18f",
+      "model": "unknown",
+      "author": {
+        "human": "Yehuda Gilead <545253+vdz@users.noreply.github.com>"
+      },
+      "total_additions": 12,
+      "total_deletions": 7,
+      "sparkey": {
+        "attribution_precision": "commit"
+      }
+    }
+  },
+  "sparkey": {
+    "client_version": ""
+  }
+}
+Sparkey-Session-Id: 79ae11fb-26d8-4458-9009-80678f86b18f
+Sparkey-Contributor-Uuid: 25f5f227-833d-47fa-9e95-a7511bdf660d
