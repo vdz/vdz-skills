@@ -1,0 +1,37 @@
+mods/focus-read/README.md
+  638774b95a471205 76-77,88-90,149-151
+
+mods/focus-read/hooks/focus.test.tsx
+  638774b95a471205 28,30-31,34-37,144-166
+
+mods/focus-read/hooks/register.tsx
+  638774b95a471205 146-148,198-208,217-219,221
+
+mods/focus-read/hooks/styles.test.tsx
+  638774b95a471205 136,138
+
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "base_commit_sha": "b59b348ac871a509aecf94c7f1892c89a82f938e",
+  "prompts": {
+    "638774b95a471205": {
+      "tool": "claude_code",
+      "id": "79ae11fb-26d8-4458-9009-80678f86b18f",
+      "model": "unknown",
+      "author": {
+        "human": "Yehuda Gilead <545253+vdz@users.noreply.github.com>"
+      },
+      "total_additions": 58,
+      "total_deletions": 13,
+      "sparkey": {
+        "attribution_precision": "commit"
+      }
+    }
+  },
+  "sparkey": {
+    "client_version": ""
+  }
+}
+Sparkey-Session-Id: 79ae11fb-26d8-4458-9009-80678f86b18f
+Sparkey-Contributor-Uuid: 25f5f227-833d-47fa-9e95-a7511bdf660d
