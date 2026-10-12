@@ -1,13 +1,13 @@
-<!-- Policy document. Codified 2026-08-19 from mattpocock-skills v1.2.3 local docs + aihero.dev + the Aug 14 2026 video (x.com/mattpocockuk/status/2088290952704151671). Referenced from ~/.claude/CLAUDE.md. -->
+<!-- Policy document. Codified 2026-08-19 from mattpocock-skills v1.2.3 local docs; updated 2026-10-12 for v1.3.1 + aihero.dev + the Aug 14 2026 video (x.com/mattpocockuk/status/2088290952704151671). Referenced from ~/.claude/CLAUDE.md. -->
 
-# Pocock workflow — codified (mattpocock-skills v1.2.x)
+# Pocock workflow — codified (mattpocock-skills v1.3.x)
 
 Agent-facing. Codifies the four main paths, the on-ramps, and the routing rules. Source of truth for mechanics: the local plugin docs (`~/.claude/plugins/cache/mattpocock/mattpocock-skills/`); aihero.dev and the Aug 14 2026 video match on emphasis and ordering.
 
 ## Invocation contract
 
-- **Slash-only skills** (`grill-with-docs`, `to-spec`, `to-tickets`, `implement`, `wayfinder`, `triage`, `handoff`, `grill-me`, `ask-matt`, `setup-matt-pocock-skills`, `improve-codebase-architecture`, `wait-what`, `to-questionnaire`, `teach`): the user types them. Never auto-invoke. When one clearly fits, say so in one line and wait.
-- **Model-invocable skills** (`grilling`, `domain-modeling`, `tdd`, `codebase-design`, `code-review`, `diagnosing-bugs`, `research`, `prototype`, `resolving-merge-conflicts`, `wizard`, `writing-for-agents`): invoke when the situation calls for it. These hold the reusable discipline; slash skills orchestrate them. A user-invoked skill may call model-invoked skills, never another user-invoked one.
+- **Slash-only skills** (`grill-with-docs`, `to-spec`, `to-tickets`, `implement`, `wayfinder`, `triage`, `handoff`, `grill-me`, `ask-matt`, `setup-matt-pocock-skills`, `improve-codebase-architecture`, `wait-what`, `to-questionnaire`, `teach`, `implement-spec`, `retro`): the user types them. Never auto-invoke. When one clearly fits, say so in one line and wait.
+- **Model-invocable skills** (`grilling`, `domain-modeling`, `tdd`, `codebase-design`, `code-review`, `diagnosing-bugs`, `research`, `prototype`, `pr`, `wizard`, `writing-for-agents`): invoke when the situation calls for it. These hold the reusable discipline; slash skills orchestrate them. A user-invoked skill may call model-invoked skills, never another user-invoked one.
 - Precondition once per repo: `/setup-matt-pocock-skills` (tracker choice, triage label strings, domain-doc layout → `docs/agents/*.md`).
 
 ## Routing (first question: session count, not project size)
@@ -22,12 +22,14 @@ Agent-facing. Codifies the four main paths, the on-ramps, and the routing rules.
 | Issues that arrived from other people | `/triage` (never for self-created tickets); merges into flow at `ready-for-agent` → `/implement` |
 | Hard bug / perf regression | `diagnosing-bugs` (Phase 1 = build a red-capable feedback loop; that IS the skill) |
 | Architecture drift, every few days | `/improve-codebase-architecture` (HTML report; survey, not rescue) |
-| Merge conflict | `resolving-merge-conflicts` (by intent, hunk by hunk, never `--abort`) |
+| Merge conflict | No skill since v1.3.0: resolve directly, by intent, hunk by hunk, never `--abort` |
+| Writing a PR body | `pr` (model-invoked): smallest visual of the change, before/after evidence, one-way/two-way door + blast radius |
+| Build done (esp. one that went sideways) | `/retro` in the same session, before `/clear`: suggests environment fixes (checks, standards, steering), not code |
 | Unsure | `/ask-matt` — recommends and stops |
 
 ## Path A — single-session feature
 
-1. `/grill-with-docs`: interview to shared understanding. Terms → `CONTEXT.md` inline as they resolve (glossary and nothing else). ADR only if **all three**: hard to reverse + surprising + real trade-off. Zero ADRs is a valid outcome.
+1. `/grill-with-docs`: interview to shared understanding. Terms → `GLOSSARY.md` inline (was `CONTEXT.md` before v1.3.0; `git mv` old ones) as they resolve (glossary and nothing else). ADR only if **all three**: hard to reverse + surprising + real trade-off. Zero ADRs is a valid outcome.
 2. Same context window: `/implement`. Execution only — no interview, no clarifying round, no alternative proposals. Drives `tdd` at pre-agreed seams (no test at an unconfirmed seam; refactoring belongs to review, not the loop). Typecheck + individual test files throughout; full suite once near the end.
 3. Closes with `code-review`: two parallel sub-agents — **Standards** (repo conventions + fixed 12 Fowler smells; every finding cites a rule or named smell) and **Spec** (fidelity to originating plan; skips entirely when no spec exists). Axes never merged or re-ranked. Then one commit.
 
@@ -37,6 +39,7 @@ Agent-facing. Codifies the four main paths, the on-ramps, and the routing rules.
 2. `/to-spec` — **same unbroken context**, no re-interviewing: "a record of decisions already made, not a place where new ones get made." Sketches testing seams first and confirms them (ideal seam count: one). Publishes one tracker issue, `ready-for-agent` label.
 3. `/to-tickets` — **still same context** (avoids refetching). Tracer-bullet tickets: vertical slices through schema/API/UI/tests, each independently demonstrable, each sized to one fresh context window, blocking edges declared, blockers published first. Wide refactors → expand–contract instead. User approves granularity. **No auto-dispatch.**
 4. `/implement` per ticket, one ticket per fresh session, `/clear` between. Never parallel implements in one checkout. **Known gap: implement ends at the commit and never closes the ticket — close it manually or downstream tickets never visibly unblock.**
+   - **Alternative: `/implement-spec`** — the whole spec in one run. Reads tickets as a task graph, runs implementer subagents in their own worktrees across the ready frontier, lands everything on one integration branch, one `code-review` at the end. PR only if the tracker closes work through PRs or you ask. Use when you'd rather orchestrate than drive each ticket.
 
 ## Path C — wayfinder (multi-session planning; plans, never does)
 
@@ -68,10 +71,12 @@ On a Ripe-architecture repo (ripe-skills family installed):
 ## Known gaps (from the author's own docs)
 
 - `implement` never closes tickets (see Path B step 4).
+- `resolving-merge-conflicts` was removed in v1.3.0 with no replacement.
+- `chief-of-staff` (long-running goal via subagents) ships under `in-progress/`, not in the plugin — ignore until it graduates.
 - `/ask-matt` falsely reports slash-only skills as "not installed" (harness omits them from the injected list).
 - `grill-with-docs` file-writing silently fails inside another orchestration wrapper — run it directly.
 - Dead names, never use: `/to-prd`→`to-spec`, `/to-issues`→`to-tickets`, `/diagnose`→`diagnosing-bugs`, `/zoom-out`→`improve-codebase-architecture`, `/ubiquitous-language`→`grill-with-docs`+`domain-modeling`.
 
-## Vocabulary (plugin CONTEXT.md canon)
+## Vocabulary (plugin GLOSSARY.md canon)
 
 "Issue tracker" (never backlog) · "Issue" (never ticket, except **decision ticket** = a wayfinder child issue holding a question) · "Triage role" = canonical label mapped via `docs/agents/triage-labels.md`.
